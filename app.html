@@ -311,9 +311,10 @@ body{font-family:var(--font);background:var(--df-navy);color:var(--df-white);ove
         <div style="color:#4a6a82;font-size:10px">/year (save 50%)</div>
       </div>
     </div>
-    <button onclick="handleUpgrade('monthly')" style="background:#f0b429;color:#0d1b2a;border:none;padding:10px 32px;font:bold 13px var(--font);cursor:pointer;letter-spacing:1px;width:100%">ACTIVATE PRO</button>
+    <button onclick="handleUpgrade('monthly')" style="background:#f0b429;color:#0d1b2a;border:none;padding:10px 32px;font:bold 13px var(--font);cursor:pointer;letter-spacing:1px;width:100%;margin-bottom:8px">SUBSCRIBE MONTHLY — $4.99/mo</button>
+    <button onclick="handleUpgrade('annual')" style="background:transparent;color:#f0b429;border:1px solid #f0b429;padding:10px 32px;font:bold 13px var(--font);cursor:pointer;letter-spacing:1px;width:100%">SUBSCRIBE ANNUAL — $29.99/yr</button>
     <div style="margin-top:12px">
-      <a onclick="closeUpgrade()" style="color:#4a6a82;font-size:10px;cursor:pointer;text-decoration:underline">Continue with Free (5 min limit)</a>
+      <a onclick="closeUpgrade()" style="color:#4a6a82;font-size:10px;cursor:pointer;text-decoration:underline">Continue with Free (2 sessions/day)</a>
     </div>
   </div>
 </div>
@@ -363,7 +364,7 @@ const STRIPE_LINKS={
   monthly:'https://buy.stripe.com/test_28E3cvaFKaKF6cT2RSes000',
   annual:'https://buy.stripe.com/test_00w4gzcNS4mh44LfEEes001'
 };
-const FREE_DAILY_LIMIT=3; // max sessions per day for free users
+const FREE_DAILY_LIMIT=2; // max sessions per day for free users
 
 const isPro=()=>localStorage.getItem('deskflow_pro')==='true';
 
@@ -432,8 +433,9 @@ function enforceFree(){
   if(startBtn&&!isPro()){
     const left=FREE_DAILY_LIMIT-getSessionCount();
     if(left<=0){
-      startBtn.style.opacity='0.35';startBtn.style.pointerEvents='none';
-      startBtn.textContent='DAILY LIMIT REACHED';
+      startBtn.style.opacity='';startBtn.style.pointerEvents='';
+      startBtn.textContent='UPGRADE TO PRO \u2192';
+      startBtn.onclick=showUpgrade;
     } else {
       startBtn.title=`${left} free session${left>1?'s':''} remaining today`;
     }
