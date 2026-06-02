@@ -360,8 +360,8 @@ body{font-family:var(--font);background:var(--df-navy);color:var(--df-white);ove
 // FREEMIUM + STRIPE
 // ============================================================
 const STRIPE_LINKS={
-  monthly:'https://buy.stripe.com/PLACEHOLDER_MONTHLY',
-  annual:'https://buy.stripe.com/PLACEHOLDER_ANNUAL'
+  monthly:'https://buy.stripe.com/test_28E3cvaFKaKF6cT2RSes000',
+  annual:'https://buy.stripe.com/test_00w4gzcNS4mh44LfEEes001'
 };
 const FREE_DAILY_LIMIT=3; // max sessions per day for free users
 
@@ -389,12 +389,7 @@ function hasSessionsLeft(){
 
 function activatePro(){localStorage.setItem('deskflow_pro','true');closeUpgrade();enforceFree();}
 function handleUpgrade(plan){
-  if(STRIPE_LINKS[plan].includes('PLACEHOLDER')){
-    // No Stripe link configured — show message
-    alert('Payment not configured yet. Contact support to activate Pro.');
-  } else {
-    window.location.href=STRIPE_LINKS[plan];
-  }
+  window.location.href=STRIPE_LINKS[plan];
 }
 // Migration: clear Pro set by old PLACEHOLDER bug (no real purchases yet)
 (function(){
