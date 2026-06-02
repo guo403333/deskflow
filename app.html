@@ -396,6 +396,14 @@ function handleUpgrade(plan){
     window.location.href=STRIPE_LINKS[plan];
   }
 }
+// Migration: clear Pro set by old PLACEHOLDER bug (no real purchases yet)
+(function(){
+  const MIG=1;
+  if(parseInt(localStorage.getItem('deskflow_mig')||'0')<MIG){
+    localStorage.removeItem('deskflow_pro');
+    localStorage.setItem('deskflow_mig',String(MIG));
+  }
+})();
 // Detect Stripe success redirect (?pro=1)
 (function(){
   const params=new URLSearchParams(window.location.search);

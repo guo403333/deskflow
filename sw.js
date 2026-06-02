@@ -1,4 +1,4 @@
-const CACHE_NAME = 'deskflow-v2';
+const CACHE_NAME = 'deskflow-v3';
 const ASSETS = [
   '/',
   '/index.html',
@@ -6,7 +6,7 @@ const ASSETS = [
   '/manifest.json'
 ];
 
-// Install — cache shell assets
+// Install — cache shell assets & activate immediately
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME)
@@ -15,7 +15,7 @@ self.addEventListener('install', e => {
   );
 });
 
-// Activate — clean old caches
+// Activate — clean old caches & claim all clients
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -24,19 +24,16 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Fetch — cache-first for same-origin, network-first for external
+// Fetch — NETWORK-FIRST: always try fresh content, fall back to cache offline
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      const fetched = fetch(e.request).then(response => {
-        if (response && response.status === 200 && response.type === 'basic') {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
-        }
-        return response;
-      }).catch(() => cached);
-      return cached || fetched;
-    })
+    fetch(e.request).then(response => {
+      if (response && response.status === 200 && response.type === 'basic') {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+      }
+      return response;
+    }).catch(() => caches.match(e.request))
   );
 });
