@@ -1,0 +1,16 @@
+{
+  "name": "DeskFlow — Trading Simulator",
+  "short_name": "DeskFlow",
+  "description": "Practice sales-trading and market-making in a realistic simulation.",
+  "start_url": "/app.html",
+  "display": "standalone",
+  "background_color": "#0d1b2a",
+  "theme_color": "#0d1b2a",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "categories": ["finance", "education", "games"],
+  "orientation": "any"
+}

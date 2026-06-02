@@ -1,0 +1,1796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeskFlow | Trading Simulator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--df-navy:#0d1b2a;--df-dark:#152238;--df-panel:#1b2d44;--df-border:#234563;--df-gold:#f0b429;--df-green:#34d399;--df-red:#f87171;--df-amber:#fbbf24;--df-cyan:#67e8f9;--df-white:#f0f4f8;--df-gray:#7e99b0;--df-dim:#4a6a82;--font:'Consolas','SF Mono','Monaco','Menlo',monospace}
+body{font-family:var(--font);background:var(--df-navy);color:var(--df-white);overflow:hidden;height:100vh;font-size:12px}
+#start-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0d1b2a}
+#start-screen h1{color:var(--df-gold);font-size:28px;margin-bottom:4px;letter-spacing:2px}
+#start-screen .sub{color:var(--df-green);font-size:14px;margin-bottom:30px}
+#start-screen .info{color:var(--df-gray);max-width:560px;text-align:center;line-height:1.8;margin-bottom:30px}
+#start-screen .info b{color:var(--df-gold)}
+.duration-select{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;justify-content:center}
+.dur-btn{background:var(--df-panel);border:1px solid var(--df-border);color:var(--df-gray);padding:8px 16px;font:bold 12px var(--font);cursor:pointer;transition:all .15s}
+.dur-btn:hover{border-color:var(--df-gold);color:var(--df-gold)}
+.dur-btn.active{background:var(--df-gold);color:#000;border-color:var(--df-gold)}
+.start-btn{background:var(--df-gold);color:#000;border:none;padding:12px 40px;font:bold 14px var(--font);cursor:pointer;letter-spacing:1px}
+.start-btn:hover{background:#d4940f}
+.hidden{display:none!important}
+#main{display:grid;grid-template-rows:32px 1fr 150px;grid-template-columns:280px 1fr 280px;height:100vh;gap:1px;background:var(--df-border)}
+.top-bar{grid-column:1/-1;background:var(--df-dark);display:flex;align-items:center;padding:0 12px;gap:16px}
+.top-bar .logo{color:var(--df-gold);font-weight:bold;font-size:13px;letter-spacing:1px}
+.top-bar .timer{color:var(--df-green);font-size:16px;font-weight:bold}
+.top-bar .timer.warning{color:var(--df-amber);animation:blink 1s infinite}
+.top-bar .timer.critical{color:var(--df-red);animation:blink .5s infinite}
+@keyframes blink{50%{opacity:.5}}
+.top-bar .pnl{margin-left:auto;font-size:13px}
+.top-bar .pnl .label{color:var(--df-gray)}
+.top-bar .pnl .value{font-weight:bold;font-size:15px;margin-left:4px}
+.top-bar .pnl .value.pos{color:var(--df-green)}
+.top-bar .pnl .value.neg{color:var(--df-red)}
+.top-bar .pnl .value.zero{color:var(--df-white)}
+.top-bar .stats{display:flex;gap:14px;margin-left:20px}
+.top-bar .stat{font-size:11px;color:var(--df-gray)}
+.top-bar .stat span{color:var(--df-white);margin-left:3px}
+.end-early-btn{background:none;border:1px solid var(--df-red);color:var(--df-red);padding:3px 10px;font:bold 10px var(--font);cursor:pointer;letter-spacing:1px;margin-left:12px;transition:all .15s}
+.end-early-btn:hover{background:var(--df-red);color:#000}
+.end-confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999}
+.end-confirm-box{background:var(--df-panel);border:1px solid var(--df-gold);padding:24px 32px;text-align:center;max-width:340px}
+.end-confirm-box h3{color:var(--df-gold);margin-bottom:12px;font-size:14px}
+.end-confirm-box p{color:var(--df-gray);margin-bottom:18px;font-size:12px;line-height:1.5}
+.end-confirm-box .ec-btns{display:flex;gap:12px;justify-content:center}
+.end-confirm-box .ec-btn{padding:8px 20px;font:bold 11px var(--font);cursor:pointer;border:1px solid #444}
+.end-confirm-box .ec-yes{background:var(--df-red);color:#000;border-color:var(--df-red)}
+.end-confirm-box .ec-yes:hover{background:#ff5555}
+.end-confirm-box .ec-no{background:none;color:var(--df-white);border-color:#555}
+.end-confirm-box .ec-no:hover{border-color:var(--df-gold);color:var(--df-gold)}
+.panel{background:var(--df-navy);overflow-y:auto;padding:0}
+.panel-header{background:var(--df-dark);padding:4px 8px;color:var(--df-gold);font-size:11px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--df-border);position:sticky;top:0;z-index:2}
+.mkt-section{border-bottom:1px solid var(--df-border);padding:4px 8px}
+.mkt-section h5{color:var(--df-gold);font-size:10px;margin-bottom:2px;letter-spacing:1px}
+.mkt-row{display:flex;align-items:center;padding:1px 0;font-size:11px}
+.mkt-row .pair{color:var(--df-cyan);width:80px;font-weight:bold;font-size:10px}
+.mkt-row .bid{color:var(--df-green);width:60px;text-align:right}
+.mkt-row .ask{color:var(--df-red);width:60px;text-align:right}
+.mkt-row .spread{color:var(--df-dim);width:35px;text-align:right;font-size:9px}
+/* CENTER */
+.center{background:var(--df-navy);display:flex;flex-direction:column;overflow:hidden}
+.center .trade-area{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column}
+.client-req{background:var(--df-panel);border:1px solid var(--df-border);border-left:3px solid var(--df-gold);margin-bottom:8px;padding:10px;transition:border-color .3s}
+.client-req.active{border-left-color:var(--df-green);background:#0d2a1f}
+.client-req.negotiating{border-left-color:var(--df-amber);background:#1a2510}
+.client-req.done{opacity:.45;border-left-color:var(--df-dim)}
+.client-req.expired{border-left-color:var(--df-red);opacity:.35}
+@keyframes flashNew{0%,100%{box-shadow:0 0 8px rgba(255,140,0,.7);border-color:var(--df-gold)}50%{box-shadow:0 0 20px rgba(255,255,0,.5);border-color:var(--df-amber)}}
+.client-req.flash{animation:flashNew .5s ease-in-out 5}
+.client-req .req-header{display:flex;justify-content:space-between;margin-bottom:5px}
+.client-req .client-name{color:var(--df-gold);font-weight:bold;font-size:12px}
+.client-req .req-time{color:var(--df-dim);font-size:10px}
+.client-req .req-body{color:var(--df-white);font-size:11px;line-height:1.5;margin-bottom:6px}
+.client-req .req-product{display:inline-block;background:#1a1a2e;color:var(--df-cyan);padding:1px 6px;border-radius:2px;font-size:11px;margin-right:5px}
+.client-req .req-size{display:inline-block;background:#1a1a0a;color:var(--df-amber);padding:1px 6px;border-radius:2px;font-size:11px;margin-right:5px}
+.client-req .req-side{display:inline-block;padding:1px 6px;border-radius:2px;font-size:11px;font-weight:bold}
+.client-req .req-side.buy{background:#002200;color:var(--df-green)}
+.client-req .req-side.sell{background:#220000;color:var(--df-red)}
+.actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;align-items:center}
+.btn{padding:4px 10px;font:bold 10px var(--font);border:none;cursor:pointer;letter-spacing:.5px}
+.btn-trader{background:#1a3a1a;color:var(--df-green);border:1px solid #2a5a2a}
+.btn-trader:hover{background:#2a5a2a}
+.btn-send{background:var(--df-gold);color:#000;border:1px solid var(--df-gold)}
+.btn-send:hover{background:#ffa500}
+.btn-pass{background:#1a1a1a;color:var(--df-gray);border:1px solid #333}
+.btn-pass:hover{background:#2a2a2a}
+.btn-accept{background:#003300;color:var(--df-green);border:1px solid #005500}
+.btn-accept:hover{background:#004400}
+.trader-price{background:#0a0a1a;border:1px solid #2a2a4a;padding:6px 8px;margin-top:7px;font-size:11px}
+.trader-price .tp-label{color:var(--df-dim);font-size:10px;margin-bottom:3px}
+.trader-price .tp-row{display:flex;gap:16px;align-items:center}
+.trader-price .tp-bid{color:var(--df-green);font-size:13px;font-weight:bold}
+.trader-price .tp-ask{color:var(--df-red);font-size:13px;font-weight:bold}
+.price-input-area{margin:8px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.price-input-area label{color:var(--df-cyan);font-size:11px;font-weight:bold}
+.price-input-area input{background:#0a0a1a;border:1px solid #2a2a4a;color:var(--df-amber);padding:5px 8px;width:110px;font:bold 13px var(--font);text-align:right}
+.price-input-area input:focus{border-color:var(--df-gold);outline:none;box-shadow:0 0 4px rgba(255,140,0,.3)}
+.price-input-area .mkt-hint{color:var(--df-dim);font-size:10px;margin-left:4px}
+.negotiate-msg{background:#1a1a0a;border:1px solid #333300;padding:6px 8px;margin-top:6px;font-size:11px;color:var(--df-amber);line-height:1.4}
+.negotiate-msg .neg-label{color:var(--df-gold);font-weight:bold;font-size:10px;margin-bottom:2px}
+.trade-result{padding:5px 8px;margin-top:6px;font-size:11px;border-radius:2px;font-weight:bold}
+.trade-result.won{background:#002200;color:var(--df-green);border:1px solid #004400}
+.trade-result.lost{background:#220000;color:var(--df-red);border:1px solid #440000}
+.req-countdown{font-size:10px;color:var(--df-amber);font-weight:bold}
+.req-countdown.urgent{color:var(--df-red);animation:blink .5s infinite}
+/* RIGHT */
+.blotter-row{display:flex;padding:3px 6px;border-bottom:1px solid var(--df-dark);font-size:10px;align-items:center}
+.blotter-row:hover{background:var(--df-panel)}
+.blotter-row .bl-time{width:38px;color:var(--df-dim)}
+.blotter-row .bl-pair{width:75px;color:var(--df-cyan);font-size:9px}
+.blotter-row .bl-side{width:28px;font-weight:bold}
+.blotter-row .bl-side.buy{color:var(--df-green)}
+.blotter-row .bl-side.sell{color:var(--df-red)}
+.blotter-row .bl-size{width:50px;color:var(--df-white);text-align:right;font-size:9px}
+.blotter-row .bl-pnl{flex:1;text-align:right;font-weight:bold}
+.blotter-row .bl-pnl.pos{color:var(--df-green)}
+.blotter-row .bl-pnl.neg{color:var(--df-red)}
+/* BOTTOM */
+.bottom-panel{grid-column:1/-1;background:var(--df-navy);border-top:1px solid var(--df-border);display:flex;flex-direction:column}
+.log-messages{flex:1;overflow-y:auto;padding:4px 8px;font-size:11px;line-height:1.5}
+.log-msg{padding:1px 0}.log-msg .log-time{color:var(--df-dim);margin-right:6px}
+.log-msg .log-from{font-weight:bold;margin-right:4px}
+.log-msg.from-client .log-from{color:var(--df-gold)}
+.log-msg.from-trader .log-from{color:var(--df-green)}
+.log-msg.from-system .log-from{color:var(--df-cyan)}
+.log-msg.from-pnl .log-from{color:var(--df-amber)}
+/* COMPLETION & FEEDBACK */
+.completion{display:flex;flex-direction:column;align-items:center;height:100vh;background:var(--df-navy);padding:30px;overflow-y:auto}
+.completion h1{color:var(--df-gold);font-size:24px;margin-bottom:15px}
+.completion .final-pnl{font-size:48px;font-weight:bold;margin-bottom:5px}
+.completion .final-pnl.pos{color:var(--df-green)}
+.completion .final-pnl.neg{color:var(--df-red)}
+.completion .stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin:15px 0;width:100%;max-width:700px}
+.completion .sg-item{background:var(--df-panel);border:1px solid var(--df-border);padding:8px;text-align:center}
+.completion .sg-item .sg-val{font-size:16px;font-weight:bold;color:var(--df-white)}
+.completion .sg-item .sg-label{font-size:9px;color:var(--df-gray);margin-top:3px}
+.restart-btn{margin-top:15px;background:var(--df-gold);color:#000;border:none;padding:10px 30px;font:bold 13px var(--font);cursor:pointer}
+.pdf-btn{margin-top:15px;margin-left:12px;background:#fff;color:#000;border:none;padding:10px 30px;font:bold 13px var(--font);cursor:pointer}
+.history-section{width:100%;max-width:750px;margin-top:24px;text-align:left}
+.history-section h2{color:var(--df-gold);font-size:14px;margin:18px 0 8px;letter-spacing:1px;border-bottom:1px solid var(--df-border);padding-bottom:4px}
+.history-table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:12px}
+.history-table th{background:var(--df-dark);color:var(--df-gold);padding:5px 8px;text-align:left;border-bottom:1px solid var(--df-border);font-size:9px;text-transform:uppercase}
+.history-table td{padding:4px 8px;border-bottom:1px solid var(--df-dark);color:var(--df-gray)}
+.history-table tr:hover td{background:var(--df-dark)}
+.history-table .current{background:#0d2a1f;font-weight:bold}
+.history-table .current td{color:var(--df-white)}
+.trend-bar{display:flex;align-items:center;gap:4px;height:14px}
+.trend-bar .bar{height:10px;min-width:2px;border-radius:1px}
+.trend-bar .bar.pos{background:var(--df-green)}
+.trend-bar .bar.neg{background:var(--df-red)}
+.progress-card{background:var(--df-dark);border:1px solid var(--df-border);padding:12px 14px;margin-bottom:10px;font-size:11px;line-height:1.7}
+.progress-card h3{color:var(--df-cyan);font-size:12px;margin-bottom:6px}
+.progress-card .metric{display:flex;justify-content:space-between;margin:4px 0;padding:3px 0;border-bottom:1px dotted var(--df-border)}
+.progress-card .metric .label{color:var(--df-dim)}
+.progress-card .metric .val{font-weight:bold}
+.progress-card .metric .val.up{color:var(--df-green)}
+.progress-card .metric .val.down{color:var(--df-red)}
+.progress-card .metric .val.flat{color:var(--df-amber)}
+.coaching-tip{background:var(--df-panel);border-left:3px solid var(--df-cyan);padding:8px 12px;margin:6px 0;font-size:11px;color:var(--df-white);line-height:1.6}
+.coaching-tip .priority{color:var(--df-gold);font-weight:bold;font-size:10px;text-transform:uppercase;margin-bottom:3px}
+.session-count{color:var(--df-dim);font-size:10px;margin-top:8px}
+.setup-section{margin-bottom:16px;width:100%;max-width:560px}
+.setup-label{color:var(--df-gold);font-size:10px;font-weight:bold;letter-spacing:2px;margin-bottom:6px;text-align:center}
+.role-select{display:flex;gap:10px;justify-content:center}
+.role-btn{background:var(--df-panel);border:1px solid var(--df-border);padding:14px 20px;cursor:pointer;text-align:center;min-width:220px;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:4px}
+.role-btn:hover{border-color:var(--df-gold)}
+.role-btn.active{border-color:var(--df-gold);background:#1a2510;box-shadow:0 0 12px rgba(240,180,41,.2)}
+.role-btn .role-icon{font-size:22px;display:block}
+.role-btn .role-title{color:var(--df-gold);font:bold 13px var(--font);letter-spacing:1px}
+.role-btn .role-desc{color:var(--df-gray);font-size:10px;line-height:1.3}
+.product-select{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.prod-btn{background:var(--df-panel);border:1px solid var(--df-border);color:var(--df-gray);padding:6px 14px;font:bold 11px var(--font);cursor:pointer;transition:all .15s;letter-spacing:.5px}
+.prod-btn:hover{border-color:var(--df-cyan);color:var(--df-cyan)}
+.prod-btn.active{background:var(--df-cyan);color:#000;border-color:var(--df-cyan)}
+.feedback{width:100%;max-width:750px;margin-top:20px;text-align:left}
+.feedback h2{color:var(--df-gold);font-size:14px;margin:18px 0 8px;letter-spacing:1px;border-bottom:1px solid var(--df-border);padding-bottom:4px}
+.feedback .grade{font-size:36px;font-weight:bold;margin:10px 0;text-align:center;padding:12px;border:2px solid var(--df-border);background:var(--df-dark);letter-spacing:2px}
+.feedback .grade.A{color:var(--df-green);border-color:#004400}
+.feedback .grade.B{color:var(--df-cyan);border-color:#003344}
+.feedback .grade.C{color:var(--df-amber);border-color:#444400}
+.feedback .grade.D{color:var(--df-red);border-color:#440000}
+.feedback .grade-desc{text-align:center;color:var(--df-gray);font-size:11px;margin-bottom:12px}
+.feedback .trade-review{background:var(--df-panel);border:1px solid var(--df-border);padding:10px 12px;margin-bottom:8px;font-size:11px;border-left:3px solid var(--df-dim)}
+.feedback .trade-review.tr-good{border-left-color:var(--df-green)}
+.feedback .trade-review.tr-bad{border-left-color:var(--df-red)}
+.feedback .trade-review.tr-ok{border-left-color:var(--df-amber)}
+.feedback .trade-review .tr-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.feedback .trade-review .tr-num{color:var(--df-dim);font-size:10px}
+.feedback .trade-review .tr-product{color:var(--df-cyan);font-size:10px;font-weight:bold}
+.feedback .trade-review .tr-pnl{font-weight:bold;font-size:12px}
+.feedback .trade-review .tr-pnl.pos{color:var(--df-green)}
+.feedback .trade-review .tr-pnl.neg{color:var(--df-red)}
+.feedback .trade-review .tr-tag{font-size:9px;padding:2px 5px;border-radius:2px;font-weight:bold;display:inline-block}
+.feedback .trade-review .tr-tag.good{background:#002200;color:var(--df-green)}
+.feedback .trade-review .tr-tag.bad{background:#220000;color:var(--df-red)}
+.feedback .trade-review .tr-tag.ok{background:#1a1a00;color:var(--df-amber)}
+.feedback .trade-review .tr-row{display:flex;gap:6px;margin:3px 0;font-size:10px;line-height:1.5}
+.feedback .trade-review .tr-label{color:var(--df-dim);width:70px;flex-shrink:0;text-transform:uppercase;font-size:9px}
+.feedback .trade-review .tr-val{color:var(--df-gray);flex:1}
+.feedback .trade-review .tr-val b{color:var(--df-white)}
+.feedback .trade-review .tr-val .highlight{color:var(--df-amber);font-weight:bold}
+.feedback .pattern-box{background:var(--df-panel);border:1px solid var(--df-border);padding:10px;margin-top:6px;font-size:11px;color:var(--df-white);line-height:1.6}
+.feedback .pattern-box .p-icon{margin-right:6px}
+.feedback .teaching{background:var(--df-dark);border:1px solid var(--df-border);padding:12px 14px;margin-top:10px;font-size:11px;line-height:1.8;color:var(--df-white)}
+.feedback .teaching h3{color:var(--df-gold);font-size:12px;margin-bottom:8px}
+.feedback .teaching b{color:var(--df-gold)}
+.feedback .teaching .tip{color:var(--df-cyan);margin:8px 0 4px;padding-left:10px;border-left:2px solid var(--df-cyan)}
+.feedback .teaching .warn{color:var(--df-amber);margin:6px 0;padding-left:10px;border-left:2px solid var(--df-amber)}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:#0d1b2a}::-webkit-scrollbar-thumb{background:#234563}
+/* MARKET MAKER MODE */
+.mm-quote-inputs{display:flex;gap:10px;align-items:center;margin:8px 0;flex-wrap:wrap}
+.mm-quote-inputs .mm-field{display:flex;flex-direction:column;gap:2px}
+.mm-quote-inputs .mm-field label{color:var(--df-dim);font-size:9px;text-transform:uppercase;letter-spacing:1px}
+.mm-quote-inputs .mm-field input{background:#0a0a1a;border:1px solid #2a2a4a;padding:6px 10px;width:120px;font:bold 14px var(--font);text-align:center}
+.mm-quote-inputs .mm-field.bid-field input{color:var(--df-green)}
+.mm-quote-inputs .mm-field.ask-field input{color:var(--df-red)}
+.mm-quote-inputs .mm-field input:focus{border-color:var(--df-gold);outline:none;box-shadow:0 0 4px rgba(255,140,0,.3)}
+.mm-spread-hint{color:var(--df-dim);font-size:10px;margin-top:4px}
+.mm-fill-result{padding:6px 8px;margin-top:6px;font-size:11px;font-weight:bold;border-radius:2px}
+.mm-fill-result.hit-bid{background:#002200;color:var(--df-green);border:1px solid #004400}
+.mm-fill-result.lift-offer{background:#220000;color:var(--df-red);border:1px solid #440000}
+.mm-fill-result.pass{background:#111;color:var(--df-gray);border:1px solid #333}
+.position-section{padding:6px 8px;border-bottom:1px solid var(--df-border)}
+.position-section h5{color:var(--df-gold);font-size:10px;margin-bottom:4px;letter-spacing:1px}
+.pos-row{display:flex;align-items:center;padding:2px 0;font-size:10px}
+.pos-row .pos-pair{color:var(--df-cyan);width:70px;font-size:9px;font-weight:bold}
+.pos-row .pos-qty{width:65px;text-align:right;font-weight:bold}
+.pos-row .pos-qty.long{color:var(--df-green)}
+.pos-row .pos-qty.short{color:var(--df-red)}
+.pos-row .pos-mtm{flex:1;text-align:right;font-size:9px;color:var(--df-dim)}
+.pos-summary{padding:6px 8px;border-top:1px solid var(--df-border);font-size:10px;color:var(--df-gray)}
+.pos-summary .pos-limit{margin-top:2px}
+.pos-summary .pos-limit.warning{color:var(--df-amber)}
+.pos-summary .pos-limit.breach{color:var(--df-red);font-weight:bold;animation:blink 1s infinite}
+</style>
+</head>
+<body>
+
+<div id="start-screen">
+  <h1>DESKFLOW</h1>
+  <div class="sub">TRADING SIMULATOR</div>
+
+  <div class="setup-section">
+    <div class="setup-label">SELECT ROLE</div>
+    <div class="role-select">
+      <button class="role-btn active" onclick="selectRole('sales',this)">
+        <span class="role-icon">&#9742;</span>
+        <span class="role-title">SALES</span>
+        <span class="role-desc">Price client flow, capture spread vs. trader hedge</span>
+      </button>
+      <button class="role-btn" onclick="selectRole('trader',this)">
+        <span class="role-icon">&#9878;</span>
+        <span class="role-title">TRADER</span>
+        <span class="role-desc">Quote bid/ask to sales desk, manage position risk</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="setup-section">
+    <div class="setup-label">SELECT PRODUCTS</div>
+    <div class="product-select">
+      <button class="prod-btn active" onclick="selectProduct('all',this)">ALL</button>
+      <button class="prod-btn" onclick="selectProduct('fx',this)">FX</button>
+      <button class="prod-btn" onclick="selectProduct('rates',this)">RATES / MACRO</button>
+      <button class="prod-btn" onclick="selectProduct('cmdty',this)">COMMODITIES</button>
+      <button class="prod-btn" onclick="selectProduct('equity',this)">EQUITY</button>
+    </div>
+  </div>
+
+  <div id="role-info" class="info">
+    <b>SALES</b> — covering corporate &amp; institutional clients<br><br>
+    <b>Workflow:</b> Client request &rarr; GET TRADER PRICE &rarr; markup &rarr; quote &rarr; fill/reject<br>
+    <b>P&L:</b> Spread captured between your quote and trader hedge level<br>
+    &#9888; <b style="color:var(--df-red)">Pricing through trader = NEGATIVE P&L</b>
+  </div>
+
+  <div class="setup-section">
+    <div class="setup-label">SESSION DURATION</div>
+    <div class="duration-select">
+      <button class="dur-btn" onclick="selectDuration(300,this)">5 MIN</button>
+      <button class="dur-btn active" onclick="selectDuration(600,this)">10 MIN</button>
+      <button class="dur-btn" onclick="selectDuration(900,this)">15 MIN</button>
+      <button class="dur-btn" onclick="selectDuration(1800,this)">30 MIN</button>
+      <button class="dur-btn" onclick="selectDuration(2700,this)">45 MIN</button>
+      <button class="dur-btn" onclick="selectDuration(3600,this)">1 HOUR</button>
+    </div>
+  </div>
+
+  <button class="start-btn" onclick="startGame()">START SESSION &gt;&gt;</button>
+  <div id="session-count" class="session-count"></div>
+</div>
+
+<!-- Upgrade Modal -->
+<div id="upgrade-modal" class="hidden" style="position:fixed;inset:0;background:rgba(13,27,42,.92);display:flex;align-items:center;justify-content:center;z-index:10000">
+  <div style="background:#1b2d44;border:1px solid #f0b429;padding:32px 40px;max-width:420px;text-align:center;font-family:var(--font)">
+    <h2 style="color:#f0b429;font-size:18px;margin-bottom:12px;letter-spacing:1px">UPGRADE TO PRO</h2>
+    <p style="color:#7e99b0;font-size:12px;line-height:1.7;margin-bottom:20px">
+      Free sessions are limited to <b style="color:#f0f4f8">5 minutes</b>.<br>
+      Unlock unlimited session lengths, PDF exports, and detailed performance analytics.
+    </p>
+    <div style="display:flex;gap:12px;justify-content:center;margin-bottom:16px">
+      <div style="background:#152238;border:1px solid #234563;padding:12px 16px;flex:1">
+        <div style="color:#7e99b0;font-size:9px;text-transform:uppercase;letter-spacing:1px">Monthly</div>
+        <div style="color:#f0b429;font-size:20px;font-weight:bold;margin:4px 0">$4.99</div>
+        <div style="color:#4a6a82;font-size:10px">/month</div>
+      </div>
+      <div style="background:#152238;border:1px solid #f0b429;padding:12px 16px;flex:1;position:relative">
+        <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:#f0b429;color:#0d1b2a;font-size:8px;padding:1px 6px;font-weight:bold">BEST VALUE</div>
+        <div style="color:#7e99b0;font-size:9px;text-transform:uppercase;letter-spacing:1px">Annual</div>
+        <div style="color:#f0b429;font-size:20px;font-weight:bold;margin:4px 0">$29.99</div>
+        <div style="color:#4a6a82;font-size:10px">/year (save 50%)</div>
+      </div>
+    </div>
+    <button onclick="handleUpgrade('monthly')" style="background:#f0b429;color:#0d1b2a;border:none;padding:10px 32px;font:bold 13px var(--font);cursor:pointer;letter-spacing:1px;width:100%">ACTIVATE PRO</button>
+    <div style="margin-top:12px">
+      <a onclick="closeUpgrade()" style="color:#4a6a82;font-size:10px;cursor:pointer;text-decoration:underline">Continue with Free (5 min limit)</a>
+    </div>
+  </div>
+</div>
+
+<div id="main" class="hidden">
+  <div class="top-bar">
+    <span class="logo">DESKFLOW</span>
+    <span id="timer" class="timer">10:00</span>
+    <div class="pnl"><span class="label">P&L:</span><span id="pnl-value" class="value zero">$0</span></div>
+    <div class="stats">
+      <div class="stat">Trades:<span id="stat-trades">0</span></div>
+      <div class="stat">Hit:<span id="stat-hitrate">0%</span></div>
+      <div class="stat">Avg:<span id="stat-spread">$0</span></div>
+    </div>
+    <button id="end-early-btn" class="end-early-btn" onclick="confirmEndEarly()">END SESSION</button>
+  </div>
+  <div class="panel left-panel">
+    <div class="panel-header">MARKET DATA</div>
+    <div class="mkt-section"><h5>G10 FX SPOT</h5><div id="mkt-fx"></div></div>
+    <div class="mkt-section"><h5>ASIA EM FX</h5><div id="mkt-em"></div></div>
+    <div class="mkt-section"><h5>NDF OUTRIGHTS</h5><div id="mkt-ndf"></div></div>
+    <div class="mkt-section"><h5>RATES (IRS/CCS)</h5><div id="mkt-rates"></div></div>
+    <div class="mkt-section"><h5>COMMODITIES</h5><div id="mkt-cmdty"></div></div>
+    <div class="mkt-section"><h5>EQUITY (HK)</h5><div id="mkt-equity"></div></div>
+  </div>
+  <div class="panel center">
+    <div class="panel-header">CLIENT REQUESTS</div>
+    <div id="trade-area" class="trade-area"></div>
+  </div>
+  <div class="panel right-panel">
+    <div class="panel-header">BLOTTER</div>
+    <div id="blotter"></div>
+  </div>
+  <div class="bottom-panel">
+    <div class="panel-header">LOG</div>
+    <div id="log" class="log-messages"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// FREEMIUM LOGIC
+// ============================================================
+// Stripe Payment Links — replace these with your live Stripe links
+const STRIPE_LINKS={
+  monthly:'https://buy.stripe.com/PLACEHOLDER_MONTHLY',
+  annual:'https://buy.stripe.com/PLACEHOLDER_ANNUAL'
+};
+const isPro=()=>localStorage.getItem('deskflow_pro')==='true';
+function activatePro(){localStorage.setItem('deskflow_pro','true');closeUpgrade();enforceFree();}
+function handleUpgrade(plan){
+  // In production: redirect to Stripe Checkout. Success URL includes ?pro=1
+  // For now, activate directly (swap to Stripe link when ready)
+  if(STRIPE_LINKS[plan].includes('PLACEHOLDER')){
+    activatePro(); // Dev mode: instant activation
+  } else {
+    window.location.href=STRIPE_LINKS[plan];
+  }
+}
+// Detect Stripe success redirect (?pro=1)
+(function(){
+  const params=new URLSearchParams(window.location.search);
+  if(params.get('pro')==='1'){
+    localStorage.setItem('deskflow_pro','true');
+    window.history.replaceState({},'',window.location.pathname);
+  }
+})();
+function closeUpgrade(){document.getElementById('upgrade-modal').classList.add('hidden');}
+function showUpgrade(){document.getElementById('upgrade-modal').classList.remove('hidden');}
+function enforceFree(){
+  const btns=document.querySelectorAll('.dur-btn');
+  btns.forEach(btn=>{
+    const secs=parseInt(btn.getAttribute('onclick').match(/\d+/)[0]);
+    if(!isPro()&&secs>300){
+      btn.style.opacity='0.35';btn.style.pointerEvents='none';
+      btn.title='Pro only — upgrade to unlock';
+    } else {
+      btn.style.opacity='';btn.style.pointerEvents='';btn.title='';
+    }
+  });
+  if(!isPro()&&SESSION_DURATION>300){
+    SESSION_DURATION=300;
+    btns.forEach(b=>b.classList.remove('active'));
+    btns[0].classList.add('active');
+  }
+  const pdfBtn=document.querySelector('.pdf-btn');
+  if(pdfBtn&&!isPro()){pdfBtn.style.opacity='0.35';pdfBtn.title='Pro only';}
+}
+window.addEventListener('DOMContentLoaded',enforceFree);
+
+const MARKETS={
+  fx:[
+    {pair:'EUR/USD',bid:1.1700,ask:1.1703,pip:0.0001,vol:0.0008},
+    {pair:'GBP/USD',bid:1.3330,ask:1.3333,pip:0.0001,vol:0.0010},
+    {pair:'AUD/USD',bid:0.7164,ask:0.7167,pip:0.0001,vol:0.0009},
+    {pair:'USD/JPY',bid:143.67,ask:143.70,pip:0.01,vol:0.08},
+    {pair:'USD/CHF',bid:0.8245,ask:0.8248,pip:0.0001,vol:0.0007},
+  ],
+  em:[
+    {pair:'USD/CNH',bid:7.1894,ask:7.1910,pip:0.0001,vol:0.0018},
+    {pair:'USD/HKD',bid:7.7932,ask:7.7937,pip:0.0001,vol:0.0003},
+    {pair:'USD/SGD',bid:1.2890,ask:1.2893,pip:0.0001,vol:0.0005},
+    {pair:'USD/TWD',bid:30.15,ask:30.18,pip:0.01,vol:0.05},
+    {pair:'USD/KRW',bid:1383.50,ask:1384.00,pip:0.01,vol:0.80},
+    {pair:'USD/INR',bid:84.50,ask:84.55,pip:0.01,vol:0.06},
+  ],
+  ndf:[
+    {pair:'CNH 1M NDF',bid:7.1940,ask:7.1975,pip:0.0001,vol:0.0015},
+    {pair:'CNH 3M NDF',bid:7.2050,ask:7.2100,pip:0.0001,vol:0.0020},
+    {pair:'CNH 6M NDF',bid:7.2250,ask:7.2320,pip:0.0001,vol:0.0025},
+    {pair:'CNH 12M NDF',bid:7.2580,ask:7.2680,pip:0.0001,vol:0.0030},
+    {pair:'KRW 3M NDF',bid:1386.00,ask:1387.50,pip:0.01,vol:1.00},
+    {pair:'TWD 1M NDF',bid:30.22,ask:30.28,pip:0.01,vol:0.06},
+    {pair:'INR 1M NDF',bid:84.65,ask:84.75,pip:0.01,vol:0.08},
+  ],
+  rates:[
+    {pair:'USD 2Y IRS',bid:3.920,ask:3.945,pip:0.005,vol:0.015},
+    {pair:'USD 5Y IRS',bid:3.850,ask:3.880,pip:0.005,vol:0.012},
+    {pair:'USD 10Y IRS',bid:4.020,ask:4.055,pip:0.005,vol:0.010},
+    {pair:'USD 30Y IRS',bid:4.150,ask:4.195,pip:0.005,vol:0.008},
+    {pair:'CNH 3Y CCS',bid:2.650,ask:2.695,pip:0.005,vol:0.020},
+    {pair:'CNH 5Y CCS',bid:2.780,ask:2.825,pip:0.005,vol:0.018},
+    {pair:'SOFR 1Y',bid:4.120,ask:4.145,pip:0.005,vol:0.010},
+    {pair:'UST 10Y',bid:4.380,ask:4.400,pip:0.005,vol:0.008},
+  ],
+  cmdty:[
+    {pair:'XAU/USD',bid:3322.10,ask:3323.70,pip:0.10,vol:3.00},
+    {pair:'XAG/USD',bid:33.45,ask:33.52,pip:0.01,vol:0.15},
+    {pair:'WTI',bid:61.50,ask:61.65,pip:0.01,vol:0.30},
+    {pair:'BRENT',bid:64.80,ask:64.95,pip:0.01,vol:0.28},
+    {pair:'COPPER',bid:4.68,ask:4.70,pip:0.01,vol:0.03},
+    {pair:'IRON ORE',bid:102.50,ask:103.00,pip:0.10,vol:1.50},
+    {pair:'LME ALU',bid:2485,ask:2490,pip:1,vol:8},
+    {pair:'NAT GAS',bid:3.35,ask:3.37,pip:0.01,vol:0.03},
+  ],
+  equity:[
+    {pair:'0700.HK',bid:428.20,ask:428.60,pip:0.20,vol:1.20},
+    {pair:'9988.HK',bid:132.80,ask:133.00,pip:0.20,vol:0.80},
+    {pair:'9618.HK',bid:168.50,ask:168.90,pip:0.20,vol:0.90},
+    {pair:'3690.HK',bid:368.00,ask:368.60,pip:0.20,vol:1.50},
+    {pair:'1810.HK',bid:20.15,ask:20.20,pip:0.05,vol:0.15},
+    {pair:'2318.HK',bid:52.30,ask:52.45,pip:0.05,vol:0.20},
+    {pair:'HSI FUT',bid:22850,ask:22865,pip:5,vol:40},
+    {pair:'A50 FUT',bid:13420,ask:13435,pip:5,vol:30},
+  ]
+};
+
+// DV01 as fraction of notional per 1bp (market standard)
+// e.g. USD 5Y IRS: DV01 ≈ $460 per $1M notional per bp → 0.00046
+const RATES_DV01={
+  'USD 2Y IRS':0.00019,'USD 5Y IRS':0.00046,'USD 10Y IRS':0.00088,
+  'USD 30Y IRS':0.0020,'CNH 3Y CCS':0.00028,'CNH 5Y CCS':0.00044,
+  'SOFR 1Y':0.0001,'UST 10Y':0.00088
+};
+
+// USD/XXX quoted pairs — priceDiff is in foreign currency, must convert to USD
+const USD_QUOTED=['USD/CNH','USD/HKD','USD/SGD','USD/TWD','USD/KRW','USD/INR','USD/JPY','USD/CHF',
+  'CNH 1M NDF','CNH 3M NDF','CNH 6M NDF','CNH 12M NDF','KRW 3M NDF','TWD 1M NDF','INR 1M NDF'];
+
+// NDF → underlying spot pair for conversion rate
+const NDF_SPOT_MAP={
+  'CNH 1M NDF':'USD/CNH','CNH 3M NDF':'USD/CNH','CNH 6M NDF':'USD/CNH','CNH 12M NDF':'USD/CNH',
+  'KRW 3M NDF':'USD/KRW','TWD 1M NDF':'USD/TWD','INR 1M NDF':'USD/INR'
+};
+
+const CLIENTS=[
+  {name:'Wang Lei',firm:'CNPC Treasury',style:'formal',patience:50,products:['USD/CNH','XAU/USD','WTI','BRENT','CNH 6M NDF','CNH 3Y CCS']},
+  {name:'Jackie Lam',firm:'Tencent',style:'fast',patience:28,products:['USD/CNH','EUR/USD','USD/HKD','USD 5Y IRS','CNH 1M NDF','CNH 3M NDF']},
+  {name:'Liu Jing',firm:'Ping An Insurance',style:'analytical',patience:55,products:['XAU/USD','USD/CNH','USD 10Y IRS','CNH 5Y CCS','USD 30Y IRS','IRON ORE']},
+  {name:'Sun Tao',firm:'CNOOC',style:'professional',patience:40,products:['WTI','BRENT','USD/CNH','NAT GAS','CNH 6M NDF','COPPER']},
+  {name:'Qian Yu',firm:'CMB Trading',style:'sharp',patience:22,products:['USD/CNH','USD/JPY','EUR/USD','KRW 3M NDF','USD 2Y IRS','SOFR 1Y']},
+  {name:'Zhao Kun',firm:'Country Garden',style:'urgent',patience:18,products:['USD/CNH','USD/HKD','CNH 3Y CCS','CNH 1M NDF','CNH 12M NDF']},
+  {name:'Kevin Zhou',firm:'Tencent Treasury',style:'quantitative',patience:35,products:['EUR/USD','GBP/USD','USD 5Y IRS','UST 10Y','XAU/USD','USD 30Y IRS']},
+  {name:'Gao Feng',firm:'Shandong HiSpeed',style:'cautious',patience:55,products:['USD/CNH','COPPER','LME ALU','CNH 5Y CCS','CNH 12M NDF']},
+  {name:'Ma Ying',firm:'CNOOC DCM',style:'efficient',patience:30,products:['WTI','BRENT','NAT GAS','USD/CNH','CNH 3M NDF']},
+  {name:'Li Wei',firm:'ICBC Markets',style:'aggressive',patience:25,products:['USD/CNH','USD/JPY','USD 2Y IRS','USD 5Y IRS','SOFR 1Y','TWD 1M NDF']},
+  {name:'Chen Hao',firm:'Sinopec Finance',style:'professional',patience:45,products:['WTI','BRENT','IRON ORE','COPPER','LME ALU','USD/CNH']},
+  {name:'Amy Wu',firm:'Alibaba Treasury',style:'fast',patience:24,products:['USD/CNH','EUR/USD','CNH 1M NDF','CNH 3M NDF','USD 5Y IRS','INR 1M NDF']},
+  {name:'Tony Cheung',firm:'Hillhouse Capital',style:'aggressive',patience:20,products:['0700.HK','9988.HK','9618.HK','3690.HK','HSI FUT','A50 FUT']},
+  {name:'Fang Li',firm:'GIC Singapore',style:'analytical',patience:45,products:['0700.HK','9988.HK','2318.HK','HSI FUT','USD/CNH','USD/SGD']},
+  {name:'Rachel Ho',firm:'BOCI Securities',style:'fast',patience:22,products:['0700.HK','1810.HK','3690.HK','9618.HK','HSI FUT','A50 FUT']},
+  {name:'David Liang',firm:'China Life AM',style:'cautious',patience:50,products:['2318.HK','0700.HK','9988.HK','HSI FUT','USD/CNH','UST 10Y']},
+  {name:'Sam Patel',firm:'Citadel HK',style:'sharp',patience:18,products:['HSI FUT','A50 FUT','0700.HK','9988.HK','1810.HK','XAU/USD']},
+];
+
+const SALES_DESK=[
+  {name:'Mike Chen',desk:'CNH Sales',style:'urgent',patience:25},
+  {name:'Sarah Wong',desk:'EM Sales',style:'fast',patience:20},
+  {name:'James Liu',desk:'Rates Sales',style:'analytical',patience:35},
+  {name:'Kelly Zhang',desk:'Cmdty Sales',style:'professional',patience:30},
+  {name:'Alan Tan',desk:'Equity Sales',style:'fast',patience:22},
+  {name:'Vivian He',desk:'Flow Sales',style:'sharp',patience:18},
+  {name:'Derek Ng',desk:'HK Sales',style:'professional',patience:28},
+  {name:'Linda Xu',desk:'Corp Sales',style:'cautious',patience:40},
+];
+
+const SIZE_TEMPLATES={
+  'USD/CNH':['$5M','$10M','$20M','$50M'],'EUR/USD':['€5M','€10M','€20M','€50M'],
+  'GBP/USD':['£5M','£10M','£20M'],'AUD/USD':['A$10M','A$20M'],
+  'USD/JPY':['$10M','$20M','$50M'],'USD/CHF':['$5M','$10M'],
+  'USD/HKD':['$10M','$20M','$50M','$100M'],'USD/SGD':['$5M','$10M'],
+  'USD/TWD':['$5M','$10M','$20M'],'USD/KRW':['$5M','$10M','$20M'],
+  'USD/INR':['$5M','$10M','$20M'],
+  'CNH 1M NDF':['$10M','$20M','$50M'],'CNH 3M NDF':['$10M','$20M','$50M'],
+  'CNH 6M NDF':['$10M','$25M','$50M'],'CNH 12M NDF':['$10M','$25M','$50M'],
+  'KRW 3M NDF':['$10M','$20M','$50M'],'TWD 1M NDF':['$10M','$20M'],
+  'INR 1M NDF':['$10M','$20M','$50M'],
+  'USD 2Y IRS':['$25M','$50M','$100M'],'USD 5Y IRS':['$25M','$50M','$100M'],
+  'USD 10Y IRS':['$25M','$50M','$100M'],'USD 30Y IRS':['$25M','$50M'],
+  'CNH 3Y CCS':['$25M','$50M','$100M'],'CNH 5Y CCS':['$25M','$50M','$100M'],
+  'SOFR 1Y':['$50M','$100M','$200M'],'UST 10Y':['$25M','$50M','$100M'],
+  'XAU/USD':['500oz','1000oz','5000oz'],'XAG/USD':['10Koz','25Koz','50Koz'],
+  'WTI':['10K bbl','25K bbl','50K bbl'],'BRENT':['10K bbl','25K bbl','50K bbl'],
+  'COPPER':['25MT','50MT','100MT'],'IRON ORE':['5KMT','10KMT','25KMT'],
+  'LME ALU':['100MT','250MT','500MT'],'NAT GAS':['50K mmBtu','100K mmBtu'],
+  '0700.HK':['50K sh','100K sh','500K sh'],'9988.HK':['100K sh','200K sh','500K sh'],
+  '9618.HK':['50K sh','100K sh','200K sh'],'3690.HK':['20K sh','50K sh','100K sh'],
+  '1810.HK':['200K sh','500K sh','1M sh'],'2318.HK':['100K sh','200K sh','500K sh'],
+  'HSI FUT':['5 lots','10 lots','20 lots'],'A50 FUT':['10 lots','20 lots','50 lots'],
+};
+
+const NOTIONAL_MAP={
+  '$5M':5e6,'$10M':1e7,'$20M':2e7,'$25M':2.5e7,'$50M':5e7,'$100M':1e8,'$200M':2e8,
+  '€5M':5e6,'€10M':1e7,'€20M':2e7,'€50M':5e7,
+  '£5M':5e6,'£10M':1e7,'£20M':2e7,'A$10M':1e7,'A$20M':2e7,
+  '500oz':500,'1000oz':1000,'5000oz':5000,
+  '10Koz':10000,'25Koz':25000,'50Koz':50000,
+  '10K bbl':10000,'25K bbl':25000,'50K bbl':50000,
+  '25MT':25,'50MT':50,'100MT':100,'250MT':250,'500MT':500,
+  '5KMT':5000,'10KMT':10000,'25KMT':25000,
+  '50K mmBtu':50000,'100K mmBtu':100000,
+  '50K sh':50000,'100K sh':100000,'200K sh':200000,'500K sh':500000,'1M sh':1000000,
+  '20K sh':20000,'5 lots':5,'10 lots':10,'20 lots':20,'50 lots':50,
+};
+
+const RIVAL_BANKS=['HSBC','JPM','GS','MS','Citi','Barclays','BNP','DB','UBS','StanChart'];
+const COUNTER_MSGS=[
+  "Too wide. I have {price} from {bank}. Can you match?",
+  "Bit rich. I can do {price}. Work for you?",
+  "Not competitive. {bank} showed me {price}.",
+  "I'll {verb} at {price}, otherwise going elsewhere.",
+];
+const SHARPEN_MSGS=[
+  "Can you sharpen? That's wide for this size.",
+  "Come on, we do a lot of flow. Tighten up.",
+  "Not competitive. Show me something better.",
+  "I need you closer to mid. Sharpen please.",
+];
+
+let SESSION_DURATION=600; // default 10 minutes, user-selectable
+let SELECTED_ROLE='sales'; // 'sales' or 'trader'
+let SELECTED_PRODUCT='all'; // 'all','fx','rates','cmdty','equity'
+
+function selectRole(role,btn){
+  SELECTED_ROLE=role;
+  document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const info=document.getElementById('role-info');
+  if(role==='sales'){
+    info.innerHTML=`<b>SALES</b> — covering corporate &amp; institutional clients<br><br>
+      <b>Workflow:</b> Client request &rarr; GET TRADER PRICE &rarr; markup &rarr; quote &rarr; fill/reject<br>
+      <b>P&L:</b> Spread captured between your quote and trader hedge level<br>
+      &#9888; <b style="color:var(--df-red)">Pricing through trader = NEGATIVE P&L</b>`;
+  } else {
+    info.innerHTML=`<b>TRADER</b> — quoting two-way prices to the sales desk<br><br>
+      <b>Workflow:</b> Sales request &rarr; QUOTE BID/ASK &rarr; sales hits/lifts &rarr; manage position<br>
+      <b>P&L:</b> Spread earned on flow &minus; adverse position moves<br>
+      &#9878; <b style="color:var(--df-cyan)">Manage inventory risk within position limits</b>`;
+  }
+}
+
+function selectProduct(cat,btn){
+  SELECTED_PRODUCT=cat;
+  document.querySelectorAll('.prod-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function selectDuration(secs,btn){
+  SESSION_DURATION=secs;
+  document.querySelectorAll('.dur-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+let game={running:false,timeLeft:SESSION_DURATION,pnl:0,trades:0,passed:0,expired:0,requests:[],blotter:[],reqId:0,intervals:[],
+  hitRate(){return this.trades+this.passed+this.expired>0?Math.round(this.trades/(this.trades+this.passed+this.expired)*100):0}};
+
+// ============================================================
+function tickMarket(){
+  [MARKETS.fx,MARKETS.em,MARKETS.ndf,MARKETS.rates,MARKETS.cmdty,MARKETS.equity].forEach(g=>{
+    g.forEach(item=>{
+      const r=(Math.random()-.5)*2*item.vol;
+      const mid=(item.bid+item.ask)/2+r;
+      const hs=(item.ask-item.bid)/2;
+      item.bid=Math.round((mid-hs)/item.pip)*item.pip;
+      item.ask=Math.round((mid+hs)/item.pip)*item.pip;
+      if(item.ask<=item.bid)item.ask=item.bid+item.pip;
+    });
+  });
+  renderMarkets();
+}
+function renderMarkets(){
+  ['mkt-fx','mkt-em','mkt-ndf','mkt-rates','mkt-cmdty','mkt-equity'].forEach((elId,i)=>{
+    const data=[MARKETS.fx,MARKETS.em,MARKETS.ndf,MARKETS.rates,MARKETS.cmdty,MARKETS.equity][i];
+    document.getElementById(elId).innerHTML=data.map(d=>{
+      const dec=getDec(d);
+      const sp=((d.ask-d.bid)/d.pip).toFixed(1);
+      return `<div class="mkt-row"><span class="pair">${d.pair}</span><span class="bid">${d.bid.toFixed(dec)}</span><span class="ask">${d.ask.toFixed(dec)}</span><span class="spread">${sp}p</span></div>`;
+    }).join('');
+  });
+}
+function getMarketItem(pair){return[...MARKETS.fx,...MARKETS.em,...MARKETS.ndf,...MARKETS.rates,...MARKETS.cmdty,...MARKETS.equity].find(m=>m.pair===pair);}
+function getDec(mkt){if(!mkt)return 4;const mid=(mkt.bid+mkt.ask)/2;return mkt.pip<0.001?4:mkt.pip<0.01?4:mkt.pip<1?(mid>100?2:3):mid>1000?0:mid>100?1:2;}
+
+// ============================================================
+// Product category mapping for filtering
+const PRODUCT_CATEGORIES={
+  fx:['EUR/USD','GBP/USD','AUD/USD','USD/JPY','USD/CHF','USD/CNH','USD/HKD','USD/SGD','USD/TWD','USD/KRW','USD/INR','CNH 1M NDF','CNH 3M NDF','CNH 6M NDF','CNH 12M NDF','KRW 3M NDF','TWD 1M NDF','INR 1M NDF'],
+  rates:['USD 2Y IRS','USD 5Y IRS','USD 10Y IRS','USD 30Y IRS','CNH 3Y CCS','CNH 5Y CCS','SOFR 1Y','UST 10Y'],
+  cmdty:['XAU/USD','XAG/USD','WTI','BRENT','COPPER','IRON ORE','LME ALU','NAT GAS'],
+  equity:['0700.HK','9988.HK','9618.HK','3690.HK','1810.HK','2318.HK','HSI FUT','A50 FUT']
+};
+function getFilteredProducts(clientProducts){
+  if(SELECTED_PRODUCT==='all') return clientProducts;
+  const allowed=PRODUCT_CATEGORIES[SELECTED_PRODUCT]||[];
+  return clientProducts.filter(p=>allowed.includes(p));
+}
+
+function generateRequest(){
+  if(!game.running)return;
+  // Filter clients by selected product category
+  let eligible=CLIENTS.filter(c=>getFilteredProducts(c.products).length>0);
+  if(eligible.length===0) eligible=CLIENTS; // fallback
+  const client=eligible[Math.floor(Math.random()*eligible.length)];
+  const filteredProds=getFilteredProducts(client.products);
+  const product=filteredProds.length>0?filteredProds[Math.floor(Math.random()*filteredProds.length)]:client.products[Math.floor(Math.random()*client.products.length)];
+  const sizes=SIZE_TEMPLATES[product]||['$10M'];
+  const size=sizes[Math.floor(Math.random()*sizes.length)];
+  const side=Math.random()>.5?'BUY':'SELL';
+  const id=++game.reqId;
+  const msgs=[
+    `Need a price on ${product}, ${side} ${size}. Quick.`,
+    `Show me ${product}? Looking to ${side.toLowerCase()} ${size}.`,
+    `${product} ${side} ${size}. Best level?`,
+    `Urgent: ${side} ${size} ${product}. What can you do?`,
+    `Hi — need ${product}, ${side} ${size}. Fire when ready.`,
+  ];
+  const msg=msgs[Math.floor(Math.random()*msgs.length)];
+  const req={id,client,product,size,side,msg,patience:client.patience,timeLeft:client.patience,
+    status:'pending',traderBid:null,traderAsk:null,clientPrice:null,
+    negotiateRound:0,maxRounds:1+Math.floor(Math.random()*2),counterPrice:null,counterMsg:null};
+  game.requests.push(req);
+  addLog('client',`${client.name} (${client.firm})`,msg);
+  appendCard(req);
+  playBeep();
+}
+
+// ============================================================
+// DOM CARD MANAGEMENT
+// ============================================================
+function appendCard(req){
+  const area=document.getElementById('trade-area');
+  const card=document.createElement('div');
+  card.className='client-req flash';card.id=`req-${req.id}`;
+  card.innerHTML=buildCardInner(req);
+  area.appendChild(card);
+  area.scrollTop=area.scrollHeight;
+  card.addEventListener('animationend',()=>card.classList.remove('flash'),{once:true});
+}
+
+function buildCardInner(req){
+  const mkt=getMarketItem(req.product);
+  const dec=getDec(mkt);
+  let countdown='';
+  if(req.status!=='done'&&req.status!=='expired')
+    countdown=`<span class="req-countdown${req.timeLeft<10?' urgent':''}" data-cd="${req.id}">${req.timeLeft}s</span>`;
+
+  let body=`<div class="req-header"><span class="client-name">${req.client.name} — ${req.client.firm}</span><span class="req-time">${countdown}</span></div>
+    <div class="req-body">${req.msg}</div>
+    <span class="req-product">${req.product}</span><span class="req-size">${req.size}</span><span class="req-side ${req.side.toLowerCase()}">${req.side}</span>`;
+
+  if(req.status==='pending'){
+    body+=`<div class="actions"><button class="btn btn-trader" onclick="getPrice(${req.id})">GET TRADER PRICE</button><button class="btn btn-pass" onclick="passReq(${req.id})">PASS</button></div>`;
+  } else if(req.status==='priced'||req.status==='negotiating'){
+    body+=`<div class="trader-price"><div class="tp-label">TRADER PRICE (${req.product})</div><div class="tp-row"><span class="tp-bid">BID ${req.traderBid.toFixed(dec)}</span><span class="tp-ask">ASK ${req.traderAsk.toFixed(dec)}</span></div></div>`;
+    if(req.counterMsg){
+      body+=`<div class="negotiate-msg"><div class="neg-label">${req.client.name}:</div>${req.counterMsg}</div>`;
+    }
+    const sideLabel=req.side==='BUY'?'Your Offer':'Your Bid';
+    const prevVal=req.clientPrice?req.clientPrice.toFixed(dec):'';
+    const placeholder=req.side==='BUY'?req.traderAsk.toFixed(dec):req.traderBid.toFixed(dec);
+    body+=`<div class="price-input-area"><label>${sideLabel}:</label><input type="text" id="price-${req.id}" value="${prevVal}" placeholder="${placeholder}" onkeydown="if(event.key==='Enter')sendQuote(${req.id})"></div>`;
+    body+=`<div class="actions"><button class="btn btn-send" onclick="sendQuote(${req.id})">SEND QUOTE</button>`;
+    if(req.counterPrice){
+      body+=`<button class="btn btn-accept" onclick="acceptCounter(${req.id})">ACCEPT ${req.counterPrice.toFixed(dec)}</button>`;
+    }
+    body+=`<button class="btn btn-trader" onclick="getPrice(${req.id})">REFRESH</button><button class="btn btn-pass" onclick="passReq(${req.id})">PASS</button></div>`;
+  } else if(req.status==='quoted'){
+    body+=`<div class="trade-result" style="background:#111;color:var(--df-gray);border:1px solid #333">Quoted @ ${req.clientPrice.toFixed(dec)} — Awaiting client response...</div>`;
+  } else if(req.status==='done'){
+    if(req.result==='filled'){
+      const pStr=req.tradePnl>=0?`+$${req.tradePnl.toLocaleString()}`:`-$${Math.abs(req.tradePnl).toLocaleString()}`;
+      body+=`<div class="trade-result ${req.tradePnl>=0?'won':'lost'}">FILLED @ ${req.clientPrice.toFixed(dec)} | P&L: ${pStr}${req.tradePnl<0?' ⚠️ PRICED THROUGH':''}</div>`;
+    } else if(req.result==='passed'){
+      body+=`<div class="trade-result lost">PASSED</div>`;
+    } else {
+      body+=`<div class="trade-result lost">CLIENT REJECTED</div>`;
+    }
+  } else if(req.status==='expired'){
+    body+=`<div class="trade-result lost">EXPIRED — Too slow</div>`;
+  }
+  return body;
+}
+
+function refreshCard(req){
+  const card=document.getElementById(`req-${req.id}`);if(!card)return;
+  let cls='client-req';
+  if(req.status==='priced')cls+=' active';
+  if(req.status==='negotiating')cls+=' negotiating';
+  if(req.status==='done')cls+=' done';
+  if(req.status==='expired')cls+=' expired';
+  card.className=cls;
+  card.innerHTML=buildCardInner(req);
+}
+
+function tickCountdowns(){
+  game.requests.forEach(req=>{
+    if(req.status==='done'||req.status==='expired')return;
+    req.timeLeft--;
+    if(req.timeLeft<=0){
+      req.status='expired';game.expired++;
+      const name=SELECTED_ROLE==='trader'?req.sales.name:req.client.name;
+      addLog('client',name,'"Too slow." [EXPIRED]');
+      if(SELECTED_ROLE==='trader'){refreshMMCard(req);}else{refreshCard(req);}
+      updateStats();
+    } else {
+      const el=document.querySelector(`[data-cd="${req.id}"]`);
+      if(el){el.textContent=req.timeLeft+'s';el.className=req.timeLeft<10?'req-countdown urgent':'req-countdown';}
+    }
+  });
+}
+
+// ============================================================
+// TRADING
+// ============================================================
+function getPrice(reqId){
+  const req=game.requests.find(r=>r.id===reqId);
+  if(!req||req.status==='done'||req.status==='expired'||req.status==='quoted')return;
+  const mkt=getMarketItem(req.product);
+  if(!mkt){addLog('system','SYS','Product not found');return;}
+  const spread=mkt.pip*(1+Math.random()*2);
+  const dec=getDec(mkt);
+  req.traderBid=parseFloat((mkt.bid-spread*.3).toFixed(dec));
+  req.traderAsk=parseFloat((mkt.ask+spread*.3).toFixed(dec));
+  if(req.status==='pending')req.status='priced';
+  addLog('trader','TRADER',`${req.product}: ${req.traderBid.toFixed(dec)} / ${req.traderAsk.toFixed(dec)} good for ${req.size}`);
+  refreshCard(req);
+}
+
+function sendQuote(reqId){
+  const req=game.requests.find(r=>r.id===reqId);
+  if(!req||(req.status!=='priced'&&req.status!=='negotiating'))return;
+  const input=document.getElementById(`price-${req.id}`);
+  if(!input)return;
+  const price=parseFloat(input.value);
+  if(isNaN(price)||price<=0){
+    input.style.borderColor='#ff3333';
+    setTimeout(()=>{input.style.borderColor='#2a2a4a';},800);
+    return;
+  }
+  const mkt=getMarketItem(req.product);const dec=getDec(mkt);
+  req.clientPrice=price;
+  req.status='quoted';req.counterMsg=null;req.counterPrice=null;
+  addLog('system','YOU',`Quoted ${req.client.name}: ${req.product} ${req.side} ${req.size} @ ${price.toFixed(dec)}`);
+  refreshCard(req);
+  setTimeout(()=>clientDecision(req),1500+Math.random()*2500);
+}
+
+function acceptCounter(reqId){
+  const req=game.requests.find(r=>r.id===reqId);
+  if(!req||!req.counterPrice)return;
+  const mkt=getMarketItem(req.product);const dec=getDec(mkt);
+  req.clientPrice=req.counterPrice;
+  req.status='quoted';req.counterMsg=null;req.counterPrice=null;
+  addLog('system','YOU',`Accepted counter @ ${req.clientPrice.toFixed(dec)} for ${req.product} ${req.side} ${req.size}`);
+  refreshCard(req);
+  setTimeout(()=>executeTrade(req),800+Math.random()*1000);
+}
+
+function clientDecision(req){
+  if(req.status!=='quoted')return;
+  const mkt=getMarketItem(req.product);
+  if(!mkt){executeTrade(req);return;}
+  const dec=getDec(mkt);
+  const mid=(mkt.bid+mkt.ask)/2;
+
+  let distFromMid=0;
+  if(req.side==='BUY'){
+    distFromMid=(req.clientPrice-mid)/mkt.pip;
+  } else {
+    distFromMid=(mid-req.clientPrice)/mkt.pip;
+  }
+
+  let prob=0.85-distFromMid*0.03;
+  if(distFromMid<0) prob=0.97;
+  if(req.client.style==='fast'||req.client.style==='sharp'||req.client.style==='aggressive')prob-=0.10;
+  if(req.client.style==='cautious'||req.client.style==='analytical')prob+=0.08;
+  if(req.negotiateRound>0)prob+=0.10;
+  prob=Math.max(0.08,Math.min(0.97,prob));
+
+  if(Math.random()<prob){
+    executeTrade(req);
+  } else if(req.negotiateRound<req.maxRounds&&distFromMid>1){
+    req.negotiateRound++;req.status='negotiating';
+    const bank=RIVAL_BANKS[Math.floor(Math.random()*RIVAL_BANKS.length)];
+    if(Math.random()>0.4){
+      const counterDist=distFromMid*(0.2+Math.random()*0.35);
+      if(req.side==='BUY'){
+        req.counterPrice=parseFloat((mid+counterDist*mkt.pip).toFixed(dec));
+      } else {
+        req.counterPrice=parseFloat((mid-counterDist*mkt.pip).toFixed(dec));
+      }
+      const tmpl=COUNTER_MSGS[Math.floor(Math.random()*COUNTER_MSGS.length)];
+      req.counterMsg=tmpl.replace('{price}',req.counterPrice.toFixed(dec)).replace('{bank}',bank).replace('{verb}',req.side==='BUY'?'pay':'sell');
+    } else {
+      req.counterPrice=null;
+      req.counterMsg=SHARPEN_MSGS[Math.floor(Math.random()*SHARPEN_MSGS.length)];
+    }
+    addLog('client',req.client.name,req.counterMsg);
+    refreshCard(req);playBeep();
+  } else {
+    req.status='done';req.result='rejected';game.passed++;
+    req.rejectMid=mid; // snapshot mid-market at time of rejection for post-session analysis
+    const bank=RIVAL_BANKS[Math.floor(Math.random()*RIVAL_BANKS.length)];
+    addLog('client',req.client.name,`"Too wide. Going with ${bank}." [REJECTED]`);
+    refreshCard(req);updateStats();
+  }
+}
+
+// ============================================================
+// P&L CALCULATION — MARKET CONVENTION
+// ============================================================
+// Sales credit = spread captured between client price and trader price (hedge level)
+// Convention:
+//   Client BUY (you OFFER/sell): P&L = clientPrice - traderAsk (you buy hedge at ask, sell to client higher)
+//   Client SELL (you BID/buy):   P&L = traderBid - clientPrice (you buy from client low, sell hedge at bid)
+//
+// Product-specific USD conversion:
+//   XXX/USD, Commodities: priceDiff already in USD → P&L = priceDiff × notional
+//   USD/XXX, Asia NDFs:   priceDiff in foreign ccy → P&L = (priceDiff × notional) / spot
+//   Rates (IRS/CCS/UST):  P&L = bps × DV01_fraction × notional
+//   COPPER (COMEX $/lb):  P&L = priceDiff × MT × 2204.6 (lbs/MT conversion)
+// ============================================================
+function executeTrade(req){
+  const mkt=getMarketItem(req.product);const dec=getDec(mkt);
+  req.status='done';req.result='filled';game.trades++;
+  const notional=NOTIONAL_MAP[req.size]||1e7;
+  let tp=0;
+
+  if(mkt&&req.traderAsk!=null&&req.traderBid!=null){
+    let priceDiff=0;
+    if(req.side==='BUY'){
+      priceDiff=req.clientPrice-req.traderAsk;
+    } else {
+      priceDiff=req.traderBid-req.clientPrice;
+    }
+
+    if(RATES_DV01[req.product]){
+      // RATES: P&L = bps captured × DV01 × notional
+      // IRS/CCS quoted in % (e.g. 3.945). 1bp = 0.01 in rate space.
+      const bps=priceDiff/0.01;
+      tp=bps*RATES_DV01[req.product]*notional;
+
+    } else if(req.product==='COPPER'){
+      // COMEX Copper: quoted $/lb, notional in MT. 1 MT = 2204.6 lbs
+      tp=priceDiff*notional*2204.6;
+
+    } else if(USD_QUOTED.includes(req.product)){
+      // USD/XXX pairs & Asia NDFs: priceDiff in foreign ccy per 1 USD
+      // P&L(foreign) = priceDiff × USD_notional → convert to USD by dividing by spot
+      let spotRate=(mkt.bid+mkt.ask)/2;
+      // For NDFs, use underlying spot pair for conversion
+      if(NDF_SPOT_MAP[req.product]){
+        const spotMkt=getMarketItem(NDF_SPOT_MAP[req.product]);
+        if(spotMkt) spotRate=(spotMkt.bid+spotMkt.ask)/2;
+      }
+      tp=(priceDiff*notional)/spotRate;
+
+    } else {
+      // XXX/USD FX (EUR/USD, GBP/USD, AUD/USD): priceDiff in USD per unit of base
+      // Commodities (XAU, XAG, WTI, BRENT, IRON ORE, LME ALU, NAT GAS): priceDiff in USD
+      // P&L = priceDiff × quantity/notional (already in USD)
+      tp=priceDiff*notional;
+    }
+  }
+
+  // Cap at reasonable single-trade limit
+  tp=Math.sign(tp)*Math.min(Math.abs(tp),100000);
+  tp=Math.round(tp);
+  req.tradePnl=tp;game.pnl+=tp;
+  const pStr=tp>=0?`+$${tp.toLocaleString()}`:`-$${Math.abs(tp).toLocaleString()}`;
+  addLog('pnl','P&L',`${req.product} ${req.side} ${req.size} FILLED @ ${req.clientPrice.toFixed(dec)} | Sales credit: ${pStr}${tp<0?' ⚠️ PRICED THROUGH':''}`);
+  game.blotter.push({time:getClock(),pair:req.product,side:req.side,size:req.size,pnl:tp});
+  renderBlotter();refreshCard(req);updateStats();
+}
+
+function passReq(reqId){
+  const req=game.requests.find(r=>r.id===reqId);if(!req)return;
+  req.status='done';req.result='passed';game.passed++;
+  addLog('system','YOU',`Passed on ${req.client.name}'s ${req.product}`);
+  refreshCard(req);updateStats();
+}
+
+// ============================================================
+// MARKET MAKER MODE
+// ============================================================
+let mmState={positions:{},realizedPnl:0,positionLimit:100000000,fills:0};
+
+function generateMMRequest(){
+  if(!game.running)return;
+  let allProducts=PRODUCT_CATEGORIES[SELECTED_PRODUCT]||Object.values(PRODUCT_CATEGORIES).flat();
+  if(SELECTED_PRODUCT==='all') allProducts=Object.values(PRODUCT_CATEGORIES).flat();
+  const product=allProducts[Math.floor(Math.random()*allProducts.length)];
+  const sizes=SIZE_TEMPLATES[product]||['$10M'];
+  const size=sizes[Math.floor(Math.random()*sizes.length)];
+  const sales=SALES_DESK[Math.floor(Math.random()*SALES_DESK.length)];
+  const id=++game.reqId;
+  const msgs=[
+    `Need a two-way on ${product}, ${size}. Client waiting.`,
+    `Price ${product} ${size}? Need both sides.`,
+    `Quick — ${product} ${size} two-way. Client on the line.`,
+    `Show me ${product} ${size}. Full market please.`,
+    `${product} ${size} — bid and offer? Urgent.`,
+  ];
+  const msg=msgs[Math.floor(Math.random()*msgs.length)];
+  const req={id,sales,product,size,msg,patience:sales.patience,timeLeft:sales.patience,
+    status:'pending',playerBid:null,playerAsk:null,fillSide:null,fillPrice:null,
+    tradePnl:null,result:null};
+  game.requests.push(req);
+  addLog('client',`${sales.name} (${sales.desk})`,msg);
+  appendMMCard(req);
+  playBeep();
+}
+
+function appendMMCard(req){
+  const area=document.getElementById('trade-area');
+  const card=document.createElement('div');
+  card.className='client-req flash';card.id=`req-${req.id}`;
+  card.innerHTML=buildMMCardInner(req);
+  area.appendChild(card);
+  area.scrollTop=area.scrollHeight;
+  card.addEventListener('animationend',()=>card.classList.remove('flash'),{once:true});
+}
+
+function buildMMCardInner(req){
+  const mkt=getMarketItem(req.product);
+  const dec=getDec(mkt);
+  let countdown='';
+  if(req.status!=='done'&&req.status!=='expired')
+    countdown=`<span class="req-countdown${req.timeLeft<10?' urgent':''}" data-cd="${req.id}">${req.timeLeft}s</span>`;
+
+  let body=`<div class="req-header"><span class="client-name">${req.sales.name} — ${req.sales.desk}</span><span class="req-time">${countdown}</span></div>
+    <div class="req-body">${req.msg}</div>
+    <span class="req-product">${req.product}</span><span class="req-size">${req.size}</span><span class="req-side buy">TWO-WAY</span>`;
+
+  if(req.status==='pending'){
+    body+=`<div style="color:var(--df-dim);font-size:10px;margin-top:6px">MKT REF: <span style="color:var(--df-green)">${mkt.bid.toFixed(dec)}</span> / <span style="color:var(--df-red)">${mkt.ask.toFixed(dec)}</span> (${((mkt.ask-mkt.bid)/mkt.pip).toFixed(1)}p spread)</div>`;
+    body+=`<div class="mm-quote-inputs">
+      <div class="mm-field bid-field"><label>YOUR BID</label><input type="text" id="mm-bid-${req.id}" placeholder="${mkt.bid.toFixed(dec)}" onkeydown="if(event.key==='Enter')document.getElementById('mm-ask-${req.id}').focus()"></div>
+      <div class="mm-field ask-field"><label>YOUR ASK</label><input type="text" id="mm-ask-${req.id}" placeholder="${mkt.ask.toFixed(dec)}" onkeydown="if(event.key==='Enter')sendMMQuote(${req.id})"></div>
+    </div>`;
+    body+=`<div class="actions"><button class="btn btn-send" onclick="sendMMQuote(${req.id})">SEND QUOTE</button><button class="btn btn-pass" onclick="passMMReq(${req.id})">PASS</button></div>`;
+  } else if(req.status==='quoted'){
+    body+=`<div class="trade-result" style="background:#111;color:var(--df-gray);border:1px solid #333">Quoted ${req.playerBid.toFixed(dec)} / ${req.playerAsk.toFixed(dec)} — Waiting for sales...</div>`;
+  } else if(req.status==='done'){
+    if(req.result==='filled'){
+      const pStr=req.tradePnl>=0?`+$${req.tradePnl.toLocaleString()}`:`-$${Math.abs(req.tradePnl).toLocaleString()}`;
+      const sideDesc=req.fillSide==='hit-bid'?'HIT YOUR BID (you bought)':'LIFTED YOUR OFFER (you sold)';
+      body+=`<div class="mm-fill-result ${req.fillSide}">${sideDesc} @ ${req.fillPrice.toFixed(dec)} | Spread: ${pStr}</div>`;
+    } else if(req.result==='passed'){
+      body+=`<div class="mm-fill-result pass">PASSED</div>`;
+    } else if(req.result==='too-wide'){
+      body+=`<div class="mm-fill-result pass">TOO WIDE — Sales went elsewhere</div>`;
+    }
+  } else if(req.status==='expired'){
+    body+=`<div class="mm-fill-result pass">EXPIRED — Too slow</div>`;
+  }
+  return body;
+}
+
+function refreshMMCard(req){
+  const card=document.getElementById(`req-${req.id}`);if(!card)return;
+  let cls='client-req';
+  if(req.status==='pending')cls+=' active';
+  if(req.status==='done')cls+=' done';
+  if(req.status==='expired')cls+=' expired';
+  card.className=cls;
+  card.innerHTML=buildMMCardInner(req);
+}
+
+function sendMMQuote(reqId){
+  const req=game.requests.find(r=>r.id===reqId);
+  if(!req||req.status!=='pending')return;
+  const bidInput=document.getElementById(`mm-bid-${req.id}`);
+  const askInput=document.getElementById(`mm-ask-${req.id}`);
+  if(!bidInput||!askInput)return;
+  const bid=parseFloat(bidInput.value);
+  const ask=parseFloat(askInput.value);
+  if(isNaN(bid)||isNaN(ask)||bid<=0||ask<=0){
+    if(isNaN(bid)||bid<=0)bidInput.style.borderColor='#ff3333';
+    if(isNaN(ask)||ask<=0)askInput.style.borderColor='#ff3333';
+    setTimeout(()=>{bidInput.style.borderColor='#2a2a4a';askInput.style.borderColor='#2a2a4a';},800);
+    return;
+  }
+  if(bid>=ask){
+    bidInput.style.borderColor='#ff3333';askInput.style.borderColor='#ff3333';
+    addLog('system','SYS','ERROR: Bid must be below Ask (crossed market)');
+    setTimeout(()=>{bidInput.style.borderColor='#2a2a4a';askInput.style.borderColor='#2a2a4a';},800);
+    return;
+  }
+  const mkt=getMarketItem(req.product);const dec=getDec(mkt);
+  req.playerBid=bid;req.playerAsk=ask;req.status='quoted';
+  addLog('system','YOU',`Quoted ${req.product} ${req.size}: ${bid.toFixed(dec)} / ${ask.toFixed(dec)}`);
+  refreshMMCard(req);
+  setTimeout(()=>salesDecision(req),1200+Math.random()*2000);
+}
+
+function passMMReq(reqId){
+  const req=game.requests.find(r=>r.id===reqId);if(!req)return;
+  req.status='done';req.result='passed';game.passed++;
+  addLog('system','YOU',`Passed on ${req.sales.name}'s ${req.product}`);
+  refreshMMCard(req);updateStats();
+}
+
+function salesDecision(req){
+  if(req.status!=='quoted')return;
+  const mkt=getMarketItem(req.product);
+  if(!mkt){executeMMFill(req,'hit-bid');return;}
+  const mid=(mkt.bid+mkt.ask)/2;
+  const mktSpread=mkt.ask-mkt.bid;
+  const playerSpread=req.playerAsk-req.playerBid;
+  const spreadRatio=playerSpread/mktSpread;
+  const playerMid=(req.playerBid+req.playerAsk)/2;
+  const midDev=Math.abs(playerMid-mid)/mkt.pip;
+
+  let prob=0.82;
+  if(spreadRatio>3.0) prob-=0.35;
+  else if(spreadRatio>2.0) prob-=0.20;
+  else if(spreadRatio>1.5) prob-=0.10;
+  else if(spreadRatio<=1.0) prob+=0.08;
+  if(midDev>5) prob-=0.15;
+  else if(midDev>3) prob-=0.08;
+  prob=Math.max(0.15,Math.min(0.95,prob));
+
+  if(Math.random()<prob){
+    const fillSide=Math.random()>0.5?'hit-bid':'lift-offer';
+    executeMMFill(req,fillSide);
+  } else {
+    req.status='done';req.result='too-wide';game.passed++;
+    addLog('client',req.sales.name,`"Too wide. Got a better price elsewhere."`);
+    refreshMMCard(req);updateStats();
+  }
+}
+
+function executeMMFill(req,fillSide){
+  const mkt=getMarketItem(req.product);const dec=getDec(mkt);
+  const mid=(mkt.bid+mkt.ask)/2;
+  const notional=NOTIONAL_MAP[req.size]||1e7;
+  req.status='done';req.result='filled';req.fillSide=fillSide;
+  game.trades++;
+
+  let spreadCapture=0,fillPrice;
+  if(fillSide==='hit-bid'){
+    fillPrice=req.playerBid;
+    spreadCapture=mid-req.playerBid;
+  } else {
+    fillPrice=req.playerAsk;
+    spreadCapture=req.playerAsk-mid;
+  }
+  req.fillPrice=fillPrice;
+
+  // Convert spread capture to USD P&L
+  let tp=0;
+  if(RATES_DV01[req.product]){
+    const bps=spreadCapture/0.01;
+    tp=bps*RATES_DV01[req.product]*notional;
+  } else if(req.product==='COPPER'){
+    tp=spreadCapture*notional*2204.6;
+  } else if(USD_QUOTED.includes(req.product)){
+    let spotRate=mid;
+    if(NDF_SPOT_MAP[req.product]){
+      const spotMkt=getMarketItem(NDF_SPOT_MAP[req.product]);
+      if(spotMkt) spotRate=(spotMkt.bid+spotMkt.ask)/2;
+    }
+    tp=(spreadCapture*notional)/spotRate;
+  } else {
+    tp=spreadCapture*notional;
+  }
+
+  tp=Math.sign(tp)*Math.min(Math.abs(tp),80000);
+  tp=Math.round(tp);
+  req.tradePnl=tp;game.pnl+=tp;
+  mmState.realizedPnl+=tp;mmState.fills++;
+
+  // Update position tracking
+  if(!mmState.positions[req.product]) mmState.positions[req.product]={qty:0,lastFillPrice:0};
+  const pos=mmState.positions[req.product];
+  if(fillSide==='hit-bid') pos.qty+=notional; else pos.qty-=notional;
+  pos.lastFillPrice=fillPrice;
+
+  const sideDesc=fillSide==='hit-bid'?'HIT BID (bought)':'LIFTED OFFER (sold)';
+  const pStr=tp>=0?`+$${tp.toLocaleString()}`:`-$${Math.abs(tp).toLocaleString()}`;
+  addLog('pnl','P&L',`${req.product} ${req.size} ${sideDesc} @ ${fillPrice.toFixed(dec)} | Spread: ${pStr}`);
+  game.blotter.push({time:getClock(),pair:req.product,side:fillSide==='hit-bid'?'BUY':'SELL',size:req.size,pnl:tp});
+  renderBlotter();refreshMMCard(req);renderPositions();updateStats();
+}
+
+function renderPositions(){
+  const panel=document.getElementById('blotter');
+  if(SELECTED_ROLE!=='trader')return;
+  const products=Object.keys(mmState.positions).filter(p=>mmState.positions[p].qty!==0);
+  let html='<div class="position-section"><h5>NET POSITIONS</h5>';
+  if(products.length===0){
+    html+=`<div style="color:var(--df-dim);font-size:10px;padding:4px 0">No open positions</div>`;
+  } else {
+    let totalGross=0;
+    products.forEach(p=>{
+      const pos=mmState.positions[p];
+      const mkt=getMarketItem(p);const dec=getDec(mkt);
+      const mid=mkt?(mkt.bid+mkt.ask)/2:0;
+      const isLong=pos.qty>0;
+      const qtyDisplay=formatMMQty(pos.qty,p);
+      totalGross+=Math.abs(pos.qty);
+      html+=`<div class="pos-row"><span class="pos-pair">${p}</span><span class="pos-qty ${isLong?'long':'short'}">${isLong?'+':''}${qtyDisplay}</span><span class="pos-mtm">${mid.toFixed(dec)}</span></div>`;
+    });
+    const utilization=Math.round(totalGross/mmState.positionLimit*100);
+    const limitClass=utilization>90?'breach':utilization>70?'warning':'';
+    html+=`</div><div class="pos-summary"><div class="pos-limit ${limitClass}">GROSS EXPOSURE: ${utilization}% of limit${utilization>90?' BREACH!':utilization>70?' WARNING':''}</div></div>`;
+  }
+  html+=`</div><div class="position-section"><h5>RECENT FILLS</h5>`;
+  html+=game.blotter.slice(-8).reverse().map(t=>
+    `<div class="blotter-row"><span class="bl-time">${t.time}</span><span class="bl-pair">${t.pair}</span><span class="bl-side ${t.side.toLowerCase()}">${t.side}</span><span class="bl-size">${t.size}</span><span class="bl-pnl ${t.pnl>=0?'pos':'neg'}">${t.pnl>=0?'+':''}$${Math.abs(t.pnl).toLocaleString()}</span></div>`
+  ).join('')||'<div style="color:var(--df-dim);font-size:10px;padding:4px 0">No fills yet</div>';
+  html+=`</div>`;
+  panel.innerHTML=html;
+}
+
+function formatMMQty(qty,product){
+  const absQty=Math.abs(qty);
+  if(product.includes('.HK'))return (absQty>=1000?(absQty/1000).toFixed(0)+'K':absQty)+' sh';
+  if(product.includes('FUT'))return absQty+' lots';
+  if(absQty>=1e9)return (absQty/1e9).toFixed(1)+'B';
+  if(absQty>=1e6)return (absQty/1e6).toFixed(0)+'M';
+  if(absQty>=1e3)return (absQty/1e3).toFixed(0)+'K';
+  return absQty.toString();
+}
+
+// ============================================================
+function renderBlotter(){
+  document.getElementById('blotter').innerHTML=game.blotter.slice().reverse().map(t=>
+    `<div class="blotter-row"><span class="bl-time">${t.time}</span><span class="bl-pair">${t.pair}</span><span class="bl-side ${t.side.toLowerCase()}">${t.side}</span><span class="bl-size">${t.size}</span><span class="bl-pnl ${t.pnl>=0?'pos':'neg'}">${t.pnl>=0?'+':''}$${Math.abs(t.pnl).toLocaleString()}</span></div>`
+  ).join('');
+}
+function updateStats(){
+  const pv=document.getElementById('pnl-value');
+  pv.textContent=(game.pnl>=0?'+':'')+`$${game.pnl.toLocaleString()}`;
+  pv.className=`value ${game.pnl>0?'pos':game.pnl<0?'neg':'zero'}`;
+  document.getElementById('stat-trades').textContent=game.trades;
+  document.getElementById('stat-hitrate').textContent=game.hitRate()+'%';
+  document.getElementById('stat-spread').textContent=game.trades>0?'$'+Math.round(game.pnl/game.trades).toLocaleString():'$0';
+}
+function updateTimer(){
+  game.timeLeft--;if(game.timeLeft<=0){endGame();return;}
+  const m=Math.floor(game.timeLeft/60),s=game.timeLeft%60;
+  const te=document.getElementById('timer');
+  te.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const warnThresh=Math.round(SESSION_DURATION*0.3),critThresh=Math.round(SESSION_DURATION*0.1);
+  te.className=game.timeLeft<=critThresh?'timer critical':game.timeLeft<=warnThresh?'timer warning':'timer';
+  tickCountdowns();
+}
+function getClock(){const e=SESSION_DURATION-game.timeLeft;return`${String(Math.floor(e/60)).padStart(2,'0')}:${String(e%60).padStart(2,'0')}`;}
+function addLog(type,from,msg){
+  const el=document.getElementById('log');const div=document.createElement('div');
+  div.className=`log-msg from-${type}`;
+  div.innerHTML=`<span class="log-time">[${getClock()}]</span><span class="log-from">${from}:</span><span>${msg}</span>`;
+  el.appendChild(div);el.scrollTop=el.scrollHeight;
+}
+function playBeep(){try{const ac=new(window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator();const g=ac.createGain();o.connect(g);g.connect(ac.destination);o.frequency.value=880;g.gain.value=0.1;o.start();o.stop(ac.currentTime+.08);}catch(e){}}
+
+function startGame(){
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('main').classList.remove('hidden');
+  // Update logo for selected role
+  document.querySelector('.top-bar .logo').textContent=SELECTED_ROLE==='trader'?'DESKFLOW TRADER':'DESKFLOW SALES';
+  // Update center panel header for role
+  document.querySelector('.center .panel-header').textContent=SELECTED_ROLE==='trader'?'SALES DESK REQUESTS':'CLIENT REQUESTS';
+  game={running:true,timeLeft:SESSION_DURATION,pnl:0,trades:0,passed:0,expired:0,requests:[],blotter:[],reqId:0,intervals:[],
+    hitRate(){return this.trades+this.passed+this.expired>0?Math.round(this.trades/(this.trades+this.passed+this.expired)*100):0}};
+  // Scale request generation to session length (baseline: 600s = 10min)
+  const scale=SESSION_DURATION/600;
+  const baseInterval=Math.round((25000+Math.random()*15000)*Math.max(0.5,Math.min(scale,1.5)));
+  const burstInterval=Math.round(35000*Math.max(0.5,Math.min(scale,1.5)));
+  const durLabel=SESSION_DURATION>=60?Math.round(SESSION_DURATION/60)+' min':SESSION_DURATION+'s';
+  // Update timer display
+  const m0=Math.floor(SESSION_DURATION/60),s0=SESSION_DURATION%60;
+  document.getElementById('timer').textContent=`${String(m0).padStart(2,'0')}:${String(s0).padStart(2,'0')}`;
+  renderMarkets();updateStats();
+  addLog('system','SYSTEM',`Session started. ${durLabel} on clock. Good luck.`);
+  game.intervals.push(setInterval(updateTimer,1000));
+  game.intervals.push(setInterval(tickMarket,2000));
+  // Market Maker mode: setup position book & use MM request generator
+  if(SELECTED_ROLE==='trader'){
+    document.querySelector('.right-panel .panel-header').textContent='POSITION BOOK';
+    mmState={positions:{},realizedPnl:0,positionLimit:100000000,fills:0};
+    renderPositions();
+  }
+  const genFn=SELECTED_ROLE==='trader'?generateMMRequest:generateRequest;
+  setTimeout(()=>genFn(),2000);
+  game.intervals.push(setInterval(()=>{if(game.running)genFn();},baseInterval));
+  game.intervals.push(setInterval(()=>{if(game.running&&Math.random()>.4)genFn();},burstInterval));
+  setTimeout(()=>{if(game.running)genFn();},8000);
+  setTimeout(()=>{if(game.running)genFn();},16000);
+}
+
+// ============================================================
+// SESSION HISTORY TRACKING (localStorage)
+// ============================================================
+function getHistory(){try{return JSON.parse(localStorage.getItem('deskflow_history')||'[]');}catch(e){return[];}}
+function saveSession(data){const h=getHistory();h.push(data);if(h.length>50)h.shift();localStorage.setItem('deskflow_history',JSON.stringify(h));}
+
+// Show session count on start screen
+(function(){
+  const h=getHistory();
+  const el=document.getElementById('session-count');
+  if(el&&h.length>0){
+    const lastGrade=h[h.length-1].grade;
+    const bestPnl=Math.max(...h.map(s=>s.pnl));
+    el.innerHTML=`Sessions completed: <span style="color:var(--df-gold)">${h.length}</span> | Last grade: <span style="color:var(--df-cyan)">${lastGrade}</span> | Best P&L: <span style="color:var(--df-green)">+$${bestPnl.toLocaleString()}</span>`;
+  }
+})();
+
+function buildProgressSection(current){
+  const history=getHistory();
+  if(history.length===0) return '';
+  const recent=history.slice(-10);
+  let html=`<div class="history-section"><h2>SESSION HISTORY & PROGRESS TRACKER</h2>`;
+  // Table of last 10 sessions
+  html+=`<table class="history-table"><tr><th>#</th><th>Date</th><th>Duration</th><th>P&L</th><th>Fills</th><th>Hit%</th><th>Errors</th><th>Grade</th><th>Trend</th></tr>`;
+  recent.forEach((s,i)=>{
+    const isCurrent=(i===recent.length-1&&s.date===current.date);
+    const cls=isCurrent?'current':'';
+    const pnlStr=s.pnl>=0?`+$${s.pnl.toLocaleString()}`:`-$${Math.abs(s.pnl).toLocaleString()}`;
+    const pnlColor=s.pnl>=0?'color:var(--df-green)':'color:var(--df-red)';
+    const maxPnl=Math.max(...recent.map(x=>Math.abs(x.pnl)),1);
+    const barW=Math.max(2,Math.round(Math.abs(s.pnl)/maxPnl*60));
+    const barCls=s.pnl>=0?'pos':'neg';
+    html+=`<tr class="${cls}"><td>${history.length-recent.length+i+1}</td><td>${s.date}</td><td>${s.duration}</td><td style="${pnlColor}">${pnlStr}</td><td>${s.fills}</td><td>${s.hitRate}%</td><td>${s.errors}</td><td>${s.grade}</td><td><div class="trend-bar"><div class="bar ${barCls}" style="width:${barW}px"></div></div></td></tr>`;
+  });
+  html+=`</table>`;
+
+  // Progress metrics (compare current vs average of previous sessions)
+  if(history.length>=2){
+    const prev=history.slice(0,-1);
+    const avgPnl=Math.round(prev.reduce((a,s)=>a+s.pnl,0)/prev.length);
+    const avgHit=Math.round(prev.reduce((a,s)=>a+s.hitRate,0)/prev.length);
+    const avgErr=(prev.reduce((a,s)=>a+s.errors,0)/prev.length).toFixed(1);
+    const avgFills=Math.round(prev.reduce((a,s)=>a+s.fills,0)/prev.length);
+    const pnlDelta=current.pnl-avgPnl;const hitDelta=current.hitRate-avgHit;const errDelta=current.errors-parseFloat(avgErr);
+    const arrow=(v)=>v>0?'up':v<0?'down':'flat';
+    const sign=(v)=>v>0?'+'+v:v;
+    const pnlDiffStr=pnlDelta>=0?'+$'+Math.abs(pnlDelta).toLocaleString():'-$'+Math.abs(pnlDelta).toLocaleString();
+    html+=`<div class="progress-card"><h3>THIS SESSION vs. AVERAGE (${prev.length} prior sessions)</h3>
+      <div class="metric"><span class="label">Total P&L</span><span class="val ${arrow(pnlDelta)}">${pnlDiffStr} vs avg $${avgPnl.toLocaleString()}</span></div>
+      <div class="metric"><span class="label">Hit Rate</span><span class="val ${arrow(hitDelta)}">${current.hitRate}% (${hitDelta>=0?'+':''}${hitDelta}% vs avg ${avgHit}%)</span></div>
+      <div class="metric"><span class="label">Pricing Errors</span><span class="val ${arrow(-errDelta)}">${current.errors} (avg ${avgErr})</span></div>
+      <div class="metric"><span class="label">Trade Count</span><span class="val ${arrow(current.fills-avgFills)}">${current.fills} fills (avg ${avgFills})</span></div>
+    </div>`;
+  }
+
+  // Targeted coaching based on recurring weaknesses
+  html+=buildCoaching(history,current);
+  html+=`</div>`;
+  return html;
+}
+
+function buildCoaching(history,current){
+  if(history.length<2) return '';
+  const last3=history.slice(-3);
+  let tips=[];
+
+  // Check recurring pricing errors
+  const errCount=last3.reduce((a,s)=>a+s.errors,0);
+  if(errCount>=3) tips.push({priority:'Critical',text:'You have priced through the hedge in '+errCount+' trades over your last 3 sessions. <b>Before every quote, say out loud: "Client BUY → I OFFER above ask. Client SELL → I BID below bid."</b> This single check eliminates 90% of pricing errors.'});
+  else if(current.errors===0&&errCount===0) tips.push({priority:'Strength',text:'Zero pricing errors across recent sessions. Your directional awareness is solid. Focus on optimizing markup width for maximum capture.'});
+
+  // Check speed issues
+  const expiredCount=last3.reduce((a,s)=>a+s.expired,0);
+  if(expiredCount>=4) tips.push({priority:'High',text:''+expiredCount+' expired requests in 3 sessions. You are losing revenue to speed. <b>Drill: try to quote within 8 seconds of seeing a request.</b> For core products (USD/CNH, CNH NDFs), memorize typical spreads so you can quote from muscle memory.'});
+
+  // Check rejection pattern
+  const rejCount=last3.reduce((a,s)=>a+s.rejected,0);
+  if(rejCount>=4) tips.push({priority:'Medium',text:''+rejCount+' client rejections recently. You are pricing too wide vs. street. <b>Tighten by 1-2 pips on liquid pairs.</b> Remember: on USD/CNH spot, 2-3 pips is market standard. Better to fill with thin margin than miss entirely.'});
+
+  // Check low hit rate
+  const avgHit=Math.round(last3.reduce((a,s)=>a+s.hitRate,0)/last3.length);
+  if(avgHit<40) tips.push({priority:'Medium',text:'Your 3-session average hit rate is only '+avgHit+'%. The target is >50%. <b>Reduce passes</b> — even unfamiliar products can be quoted with a safety margin. Revenue left on the table compounds over time.'});
+
+  // Check improvement trend
+  if(history.length>=3){
+    const last=history[history.length-1];
+    const prev=history[history.length-2];
+    const prev2=history[history.length-3];
+    if(last.pnl>prev.pnl&&prev.pnl>prev2.pnl) tips.push({priority:'Positive',text:'3 sessions of consecutive P&L improvement. You are building muscle memory. Keep pushing — next target: sustain Grade A across 3 consecutive sessions.'});
+    if(last.pnl<prev.pnl&&prev.pnl<prev2.pnl) tips.push({priority:'Alert',text:'P&L declining for 3 straight sessions. Consider: (1) Are you fatigued and rushing? (2) Are you over-widening and losing fills? Slow down, refocus on the basics.'});
+  }
+
+  // Product-specific weakness (if tracked)
+  if(tips.length===0) tips.push({priority:'Next Level',text:'No recurring issues detected. To improve further: try longer sessions (30-45 min) to test stamina under sustained flow, or focus on your weakest product class (Rates typically requires most precision due to DV01 scaling).'});
+
+  let html='<h2 style="color:var(--df-gold)">TARGETED COACHING</h2>';
+  tips.forEach(t=>{
+    html+=`<div class="coaching-tip"><div class="priority">${t.priority}</div>${t.text}</div>`;
+  });
+  return html;
+}
+
+// ============================================================
+// END SESSION EARLY — CONFIRMATION
+// ============================================================
+function confirmEndEarly(){
+  if(!game.running)return;
+  // Pause timer during confirmation
+  const overlay=document.createElement('div');
+  overlay.className='end-confirm-overlay';
+  overlay.id='end-confirm-overlay';
+  overlay.innerHTML=`<div class="end-confirm-box">
+    <h3>END SESSION EARLY?</h3>
+    <p>Session will end now with your current P&L.<br>All pending requests will be marked expired.</p>
+    <div class="ec-btns">
+      <button class="ec-btn ec-yes" onclick="doEndEarly()">END NOW</button>
+      <button class="ec-btn ec-no" onclick="cancelEndEarly()">CONTINUE</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+function cancelEndEarly(){
+  const overlay=document.getElementById('end-confirm-overlay');
+  if(overlay)overlay.remove();
+}
+function doEndEarly(){
+  const overlay=document.getElementById('end-confirm-overlay');
+  if(overlay)overlay.remove();
+  endGame();
+}
+
+// END GAME — FEEDBACK & TEACH-IN
+// ============================================================
+function endGame(){
+  game.running=false;game.intervals.forEach(id=>clearInterval(id));
+  document.getElementById('main').classList.add('hidden');
+  document.body.style.overflow='auto';
+
+  const filled=game.requests.filter(r=>r.result==='filled');
+  const rejected=game.requests.filter(r=>r.result==='rejected');
+  const passed=game.requests.filter(r=>r.result==='passed');
+  const expired=game.requests.filter(r=>r.status==='expired');
+  const totalReqs=game.requests.length;
+  const goodTrades=filled.filter(t=>t.tradePnl>500);
+  const badTrades=filled.filter(t=>t.tradePnl<0);
+  const okTrades=filled.filter(t=>t.tradePnl>=0&&t.tradePnl<=500);
+
+  let grade='D',gradeDesc='';
+  const avgPnl=filled.length>0?game.pnl/filled.length:0;
+  const hitRate=game.hitRate();
+
+  if(game.pnl>=15000&&hitRate>=60&&badTrades.length<=1){
+    grade='A';gradeDesc='Excellent execution. Strong spread capture with minimal mis-prices. Ready for live flow.';
+  } else if(game.pnl>=5000&&hitRate>=45&&badTrades.length<=2){
+    grade='B';gradeDesc='Solid performance. Good commercial awareness with room to sharpen pricing discipline.';
+  } else if(game.pnl>=0||hitRate>=35){
+    grade='C';gradeDesc='Adequate but inconsistent. Review pricing mechanics and improve response speed.';
+  } else {
+    grade='D';gradeDesc='Below expectations. Fundamental pricing errors or excessive missed flow. Study the teach-in below.';
+  }
+
+  // Pattern analysis
+  let patterns=[];
+  if(badTrades.length>=2) patterns.push({icon:'⚠️',text:`${badTrades.length} trades priced through hedge level — you paid away spread to the client.`});
+  if(badTrades.length===1) patterns.push({icon:'⚠️',text:`1 trade priced through hedge. Manageable, but each mis-price erodes your book.`});
+  if(expired.length>=2) patterns.push({icon:'⏱️',text:`${expired.length} requests expired. In live markets, slow = no fill = no revenue.`});
+  if(rejected.length>=3) patterns.push({icon:'📉',text:`${rejected.length} client rejections. Your pricing was uncompetitive vs. street.`});
+  if(goodTrades.length>=3) patterns.push({icon:'✅',text:`${goodTrades.length} trades with strong sales credit. Good feel for markup calibration.`});
+  if(passed.length>=3) patterns.push({icon:'🚫',text:`${passed.length} passed requests. Revenue left on the table — assess if any were tradeable.`});
+  if(filled.length>=5&&avgPnl>0&&badTrades.length===0) patterns.push({icon:'🎯',text:`Clean book: ${filled.length} fills, no mis-prices. This is how you build a franchise.`});
+  if(patterns.length===0) patterns.push({icon:'📋',text:'Limited sample — run another session for meaningful pattern analysis.'});
+
+  // Teaching points
+  let teachings=[];
+  if(badTrades.length>0){
+    teachings.push({title:'Pricing Through Hedge — The Cardinal Sin',tips:[
+      '<b>Client BUY:</b> You are offering (selling). Your offer must be ABOVE traderAsk. That ask is your cost of hedging. Offer below it = you subsidize the client.',
+      '<b>Client SELL:</b> You are bidding (buying). Your bid must be BELOW traderBid. That bid is your exit level. Bid above it = you overpay vs. where you can unwind.',
+      '<b>Mental model:</b> TraderAsk = your purchase cost. Your offer = your selling price. Selling below cost = loss. Always.',
+      '<b>Fix:</b> Before typing your price, visually confirm: "Am I on the right side of the trader level?" One second of checking saves thousands in P&L.',
+    ]});
+  }
+  if(expired.length>=2){
+    teachings.push({title:'Speed — The Edge You Control',tips:[
+      'Market convention: client expects a price within 10-15 seconds of asking. Beyond that, you lose to competitors.',
+      'Workflow: scan market panel → click GET TRADER PRICE → add your markup → send. Target: under 8 seconds.',
+      'For products you price regularly (USD/CNH, short-dated NDFs), you should know the approximate spread from memory.',
+      'Pre-position: when markets are quiet, mentally rehearse levels for your core products so you can quote fast when flow hits.',
+    ]});
+  }
+  if(rejected.length>=2){
+    teachings.push({title:'Competitive Pricing & Client Franchise',tips:[
+      'Clients run multi-bank panels. If you are 5+ pips off mid-market on liquid pairs, you will lose every time.',
+      '<b>Liquid (USD/CNH spot, G10):</b> 1-2 pip markup is market standard. Compete on speed and relationship.',
+      '<b>Semi-liquid (NDFs, short IRS):</b> 2-4 pips. Clients accept wider for execution certainty.',
+      '<b>Illiquid (long-dated CCS, EM NDFs):</b> 5-10 pips. Price for the risk you carry.',
+      'Counter-offers are information: they tell you the competitive level. Adjust and re-quote — don\'t ignore them.',
+    ]});
+  }
+  if(passed.length>=2&&badTrades.length===0){
+    teachings.push({title:'Revenue Maximization',tips:[
+      'A passed trade is zero revenue with zero risk. But also zero relationship building.',
+      'Only pass when: (1) product genuinely outside your mandate, (2) market is gapping/no liquidity, (3) counterparty credit issue.',
+      'Even on unfamiliar products — ask trader for a price, add 3-5 pips safety margin, and quote. Small P&L > no P&L.',
+      'Your job metric: total sales credit generated. Passes don\'t count towards your budget.',
+    ]});
+  }
+  if(teachings.length===0){
+    teachings.push({title:'Next Level — Advanced Techniques',tips:[
+      '<b>Volatility-adjusted markup:</b> In high-vol sessions, widen 1-3 pips. Clients expect it and immediacy premium is real.',
+      '<b>Client segmentation:</b> Tier-1 corporates (CNPC, ICBC) → tight pricing for flow. Tier-2 → wider is acceptable.',
+      '<b>Rates DV01 awareness:</b> On a 10Y $100M IRS, 0.5bp = ~$44K P&L. Precision matters exponentially with tenor and size.',
+      '<b>NDF vs. Spot arbitrage:</b> Check if NDF forward points are wide vs. implied. If so, widen your markup to match.',
+      '<b>Franchise value:</b> A $500 trade today with a key client → thousands in flow over the next month. Think portfolio, not trade.',
+    ]});
+  }
+
+  // Build HTML
+  const c=document.createElement('div');c.className='completion';
+  let html=`<h1>SESSION COMPLETE</h1>
+    <div class="final-pnl ${game.pnl>=0?'pos':'neg'}">${game.pnl>=0?'+':''}$${Math.abs(game.pnl).toLocaleString()}</div>
+    <div style="color:#888;margin-bottom:20px">Total Sales Credit (${SESSION_DURATION>=60?Math.round(SESSION_DURATION/60)+'-min':SESSION_DURATION+'s'} session)</div>
+    <div class="stats-grid">
+      <div class="sg-item"><div class="sg-val">${game.trades}</div><div class="sg-label">Fills</div></div>
+      <div class="sg-item"><div class="sg-val">${rejected.length+expired.length}</div><div class="sg-label">Missed</div></div>
+      <div class="sg-item"><div class="sg-val">${hitRate}%</div><div class="sg-label">Hit Rate</div></div>
+      <div class="sg-item"><div class="sg-val">${filled.length>0?(avgPnl>=0?'+':'')+'$'+Math.abs(Math.round(avgPnl)).toLocaleString():'$0'}</div><div class="sg-label">Avg Credit/Trade</div></div>
+    </div>`;
+
+  html+=`<div class="feedback">`;
+  html+=`<div class="grade ${grade}">${grade}</div><div class="grade-desc">${gradeDesc}</div>`;
+
+  // Trade-by-trade review
+  if(filled.length>0||rejected.length>0||expired.length>0){
+    html+=`<h2>TRADE-BY-TRADE REVIEW</h2>`;
+    let tradeNum=0;
+   if(SELECTED_ROLE==='trader'){
+    // Market Maker review
+    filled.forEach(t=>{
+      tradeNum++;
+      const mkt2=getMarketItem(t.product);const dec2=getDec(mkt2);
+      const pStr2=t.tradePnl>=0?`+$${t.tradePnl.toLocaleString()}`:`-$${Math.abs(t.tradePnl).toLocaleString()}`;
+      let tag='',tagClass='';
+      if(t.tradePnl>2000){tag='STRONG';tagClass='good';}
+      else if(t.tradePnl>500){tag='GOOD';tagClass='good';}
+      else if(t.tradePnl>=0){tag='THIN';tagClass='ok';}
+      else{tag='NEGATIVE';tagClass='bad';}
+      const sideDesc=t.fillSide==='hit-bid'?'HIT BID (you bought)':'LIFTED OFFER (you sold)';
+      html+=`<div class="trade-review tr-${tagClass}">
+        <div class="tr-header"><span class="tr-num">#${tradeNum}</span> <span class="tr-product">${t.product}</span> <span class="tr-tag ${tagClass}">${tag}</span><span class="tr-pnl ${t.tradePnl>=0?'pos':'neg'}">${pStr2}</span></div>
+        <div class="tr-row"><span class="tr-label">From</span><span class="tr-val"><b>${t.sales.name}</b> (${t.sales.desk}): "${t.msg}"</span></div>
+        <div class="tr-row"><span class="tr-label">Your mkt</span><span class="tr-val"><span style="color:var(--df-green)">Bid ${t.playerBid.toFixed(dec2)}</span> / <span style="color:var(--df-red)">Ask ${t.playerAsk.toFixed(dec2)}</span> (${((t.playerAsk-t.playerBid)/mkt2.pip).toFixed(1)}p spread)</span></div>
+        <div class="tr-row"><span class="tr-label">Result</span><span class="tr-val">${sideDesc} @ ${t.fillPrice.toFixed(dec2)}</span></div>
+      </div>`;
+    });
+    const tooWide=game.requests.filter(r=>r.result==='too-wide');
+    tooWide.forEach(t=>{
+      tradeNum++;
+      const mkt2=getMarketItem(t.product);const dec2=getDec(mkt2);
+      html+=`<div class="trade-review tr-bad">
+        <div class="tr-header"><span class="tr-num">#${tradeNum}</span> <span class="tr-product">${t.product}</span> <span class="tr-tag bad">TOO WIDE</span><span class="tr-pnl neg">$0</span></div>
+        <div class="tr-row"><span class="tr-label">From</span><span class="tr-val"><b>${t.sales.name}</b> (${t.sales.desk}): "${t.msg}"</span></div>
+        <div class="tr-row"><span class="tr-label">Your mkt</span><span class="tr-val">${t.playerBid?`${t.playerBid.toFixed(dec2)} / ${t.playerAsk.toFixed(dec2)}`:'N/A'} — Sales found tighter elsewhere</span></div>
+      </div>`;
+    });
+    expired.forEach(t=>{
+      tradeNum++;
+      html+=`<div class="trade-review tr-bad">
+        <div class="tr-header"><span class="tr-num">#${tradeNum}</span> <span class="tr-product">${t.product}</span> <span class="tr-tag bad">EXPIRED</span><span class="tr-pnl neg">$0</span></div>
+        <div class="tr-row"><span class="tr-label">From</span><span class="tr-val"><b>${t.sales.name}</b> (${t.sales.desk}): "${t.msg}"</span></div>
+        <div class="tr-row"><span class="tr-label">Response</span><span class="tr-val" style="color:var(--df-red)">No quote sent — timed out after ${t.patience}s</span></div>
+      </div>`;
+    });
+   } else {
+    // Sales Trader review
+    filled.forEach(t=>{
+      tradeNum++;
+      const mkt2=getMarketItem(t.product);const dec2=getDec(mkt2);
+      const pStr2=t.tradePnl>=0?`+$${t.tradePnl.toLocaleString()}`:`-$${Math.abs(t.tradePnl).toLocaleString()}`;
+      let tag='',tagClass='';
+      if(t.tradePnl>2000){tag='STRONG';tagClass='good';}
+      else if(t.tradePnl>500){tag='GOOD';tagClass='good';}
+      else if(t.tradePnl>=0){tag='THIN';tagClass='ok';}
+      else{tag='THROUGH';tagClass='bad';}
+      const hedgeLevel=t.side==='BUY'?t.traderAsk:t.traderBid;
+      const sideAction=t.side==='BUY'?'Offered (sold to client)':'Bid (bought from client)';
+      html+=`<div class="trade-review tr-${tagClass}">
+        <div class="tr-header"><span class="tr-num">#${tradeNum}</span> <span class="tr-product">${t.product}</span> <span class="tr-tag ${tagClass}">${tag}</span><span class="tr-pnl ${t.tradePnl>=0?'pos':'neg'}">${pStr2}</span></div>
+        <div class="tr-row"><span class="tr-label">Request</span><span class="tr-val"><b>${t.client.name}</b> (${t.client.firm}): "${t.msg}"</span></div>
+        <div class="tr-row"><span class="tr-label">Trader</span><span class="tr-val"><span style="color:var(--df-green)">Bid ${t.traderBid.toFixed(dec2)}</span> / <span style="color:var(--df-red)">Ask ${t.traderAsk.toFixed(dec2)}</span></span></div>
+        <div class="tr-row"><span class="tr-label">Your quote</span><span class="tr-val">${sideAction} @ <span class="highlight">${t.clientPrice.toFixed(dec2)}</span></span></div>
+        <div class="tr-row"><span class="tr-label">Spread</span><span class="tr-val">Hedge @ ${hedgeLevel.toFixed(dec2)} → Captured: ${((t.side==='BUY'?t.clientPrice-t.traderAsk:t.traderBid-t.clientPrice)/mkt2.pip).toFixed(1)} pips</span></div>
+      </div>`;
+    });
+    rejected.forEach(t=>{
+      tradeNum++;
+      const mkt2=getMarketItem(t.product);const dec2=getDec(mkt2);
+      const hedgeLevel=t.side==='BUY'?t.traderAsk:t.traderBid;
+      const sideAction=t.side==='BUY'?'Offered (sold to client)':'Bid (bought from client)';
+      const midAtReject=t.rejectMid?t.rejectMid.toFixed(dec2):'N/A';
+      html+=`<div class="trade-review tr-bad">
+        <div class="tr-header"><span class="tr-num">#${tradeNum}</span> <span class="tr-product">${t.product}</span> <span class="tr-tag bad">REJECTED</span><span class="tr-pnl neg">$0</span></div>
+        <div class="tr-row"><span class="tr-label">Request</span><span class="tr-val"><b>${t.client.name}</b> (${t.client.firm}): "${t.msg}"</span></div>
+        <div class="tr-row"><span class="tr-label">Trader</span><span class="tr-val">${t.traderBid?`<span style="color:var(--df-green)">Bid ${t.traderBid.toFixed(dec2)}</span> / <span style="color:var(--df-red)">Ask ${t.traderAsk.toFixed(dec2)}</span>`:'N/A (no trader price fetched)'}</span></div>
+        <div class="tr-row"><span class="tr-label">Your quote</span><span class="tr-val">${sideAction} @ <span class="highlight">${t.clientPrice?t.clientPrice.toFixed(dec2):'N/A'}</span></span></div>
+        <div class="tr-row"><span class="tr-label">Market</span><span class="tr-val">Mid @ rejection: ${midAtReject} → Client found tighter elsewhere</span></div>
+      </div>`;
+    });
+    expired.forEach(t=>{
+      tradeNum++;
+      html+=`<div class="trade-review tr-bad">
+        <div class="tr-header"><span class="tr-num">#${tradeNum}</span> <span class="tr-product">${t.product}</span> <span class="tr-tag bad">EXPIRED</span><span class="tr-pnl neg">$0</span></div>
+        <div class="tr-row"><span class="tr-label">Request</span><span class="tr-val"><b>${t.client.name}</b> (${t.client.firm}): "${t.msg}"</span></div>
+        <div class="tr-row"><span class="tr-label">Response</span><span class="tr-val" style="color:var(--df-red)">No quote sent — timed out after ${t.patience}s</span></div>
+      </div>`;
+    });
+   }
+  }
+
+  // ===== ERROR BREAKDOWN — show worked examples of mistakes (Sales Trader only) =====
+  if(SELECTED_ROLE!=='trader'&&badTrades.length>0){
+    html+=`<h2>⚠️ ERROR BREAKDOWN — PRICED THROUGH HEDGE</h2>`;
+    badTrades.forEach((t,i)=>{
+      const mkt2=getMarketItem(t.product);const dec2=getDec(mkt2);
+      const hedgeLevel=t.side==='BUY'?t.traderAsk:t.traderBid;
+      const diff=t.side==='BUY'?(t.clientPrice-t.traderAsk):(t.traderBid-t.clientPrice);
+      const pipsThrough=(diff/mkt2.pip).toFixed(1);
+      const correctPrice=t.side==='BUY'?
+        (t.traderAsk+mkt2.pip*2):(t.traderBid-mkt2.pip*2);
+      html+=`<div class="teaching" style="border-color:#440000;background:#0a0000;margin-bottom:10px">
+        <h3 style="color:var(--df-red)">Error #${i+1}: ${t.product} ${t.side} ${t.size}</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0;font-size:11px">
+          <div style="background:#111;padding:6px 8px;border:1px solid #333">
+            <div style="color:var(--df-dim);font-size:9px;margin-bottom:3px">WHAT YOU DID</div>
+            <div>Client ${t.side} → You ${t.side==='BUY'?'offered (sold)':'bid (bought)'}</div>
+            <div style="color:var(--df-amber);font-weight:bold;margin-top:4px">Your price: ${t.clientPrice.toFixed(dec2)}</div>
+            <div style="color:var(--df-red)">Trader ${t.side==='BUY'?'ask':'bid'}: ${hedgeLevel.toFixed(dec2)}</div>
+            <div style="color:var(--df-red);margin-top:4px;font-weight:bold">→ ${Math.abs(pipsThrough)} pips THROUGH hedge</div>
+          </div>
+          <div style="background:#001100;padding:6px 8px;border:1px solid #003300">
+            <div style="color:var(--df-dim);font-size:9px;margin-bottom:3px">WHAT YOU SHOULD HAVE DONE</div>
+            <div>Your ${t.side==='BUY'?'offer':'bid'} must be ${t.side==='BUY'?'ABOVE trader ask':'BELOW trader bid'}</div>
+            <div style="color:var(--df-green);font-weight:bold;margin-top:4px">Correct price: ${correctPrice.toFixed(dec2)} (2 pip markup)</div>
+            <div style="color:var(--df-dim)">Trader ${t.side==='BUY'?'ask':'bid'}: ${hedgeLevel.toFixed(dec2)}</div>
+            <div style="color:var(--df-green);margin-top:4px;font-weight:bold">→ Would have earned +$${Math.abs(t.tradePnl).toLocaleString()} instead</div>
+          </div>
+        </div>
+        <div class="warn" style="border-left-color:var(--df-red)"><b>Why this lost money:</b> ${t.side==='BUY'?
+          `You offered at ${t.clientPrice.toFixed(dec2)} but your cost to hedge (buy from trader) was ${hedgeLevel.toFixed(dec2)}. You sold BELOW your cost — the client got a better price than the interbank market. You lost $${Math.abs(t.tradePnl).toLocaleString()} on the hedge.`:
+          `You bid at ${t.clientPrice.toFixed(dec2)} but your exit level (sell to trader) was ${hedgeLevel.toFixed(dec2)}. You bought ABOVE where you could sell — you overpaid the client vs. market. You lost $${Math.abs(t.tradePnl).toLocaleString()} on the hedge.`
+        }</div>
+      </div>`;
+    });
+  }
+
+  // ===== REJECTION BREAKDOWN — show what competitive looked like (Sales Trader only) =====
+  if(SELECTED_ROLE!=='trader'&&rejected.length>0){
+    html+=`<h2>📉 REJECTION BREAKDOWN — TOO WIDE</h2>`;
+    rejected.forEach((t,i)=>{
+      const mkt2=getMarketItem(t.product);const dec2=getDec(mkt2);
+      if(t.clientPrice&&mkt2){
+        const mid=t.rejectMid||(mkt2.bid+mkt2.ask)/2;
+        const distPips=t.side==='BUY'?
+          ((t.clientPrice-mid)/mkt2.pip).toFixed(1):
+          ((mid-t.clientPrice)/mkt2.pip).toFixed(1);
+        const competitivePrice=t.side==='BUY'?
+          (mid+mkt2.pip*2).toFixed(dec2):
+          (mid-mkt2.pip*2).toFixed(dec2);
+        const hedgeRef=t.side==='BUY'?t.traderAsk:t.traderBid;
+        html+=`<div class="teaching" style="border-color:#444400;background:#0a0a00;margin-bottom:10px">
+          <h3 style="color:var(--df-amber)">Rejected #${i+1}: ${t.product} ${t.side} ${t.size} — ${t.client.name}</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0;font-size:11px">
+            <div style="background:#111;padding:6px 8px;border:1px solid #333">
+              <div style="color:var(--df-dim);font-size:9px;margin-bottom:3px">WHAT YOU QUOTED</div>
+              <div>Your ${t.side==='BUY'?'offer':'bid'}: <span style="color:var(--df-amber);font-weight:bold">${t.clientPrice.toFixed(dec2)}</span></div>
+              <div>Mid-market: ${mid.toFixed(dec2)}</div>
+              ${hedgeRef?`<div>Your hedge: ${hedgeRef.toFixed(dec2)}</div>`:''}
+              <div style="color:var(--df-amber);margin-top:4px;font-weight:bold">→ ${distPips} pips from mid</div>
+            </div>
+            <div style="background:#001100;padding:6px 8px;border:1px solid #003300">
+              <div style="color:var(--df-dim);font-size:9px;margin-bottom:3px">COMPETITIVE LEVEL</div>
+              <div>Street standard: <span style="color:var(--df-green);font-weight:bold">${competitivePrice}</span></div>
+              <div style="color:var(--df-dim)">(2 pips from mid)</div>
+              <div style="color:var(--df-green);margin-top:4px">Tighter = higher fill rate</div>
+            </div>
+          </div>
+          <div class="tip">Client went to a competitor. You were <b>${distPips} pips</b> from mid — street standard is 2-3 pips on liquid, 4-6 on semi-liquid.</div>
+        </div>`;
+      }
+    });
+  }
+
+  // Patterns
+  if(patterns.length>0){
+    html+=`<h2>PATTERN ANALYSIS</h2><div class="pattern-box">`;
+    patterns.forEach(p=>{
+      html+=`<div style="margin-bottom:4px"><span class="p-icon">${p.icon}</span> ${p.text}</div>`;
+    });
+    html+=`</div>`;
+  }
+
+  // Teach-in
+  html+=`<h2>TEACH-IN</h2>`;
+  teachings.forEach(section=>{
+    html+=`<div class="teaching"><h3>${section.title}</h3>`;
+    section.tips.forEach(tip=>{
+      html+=`<div class="tip">${tip}</div>`;
+    });
+    html+=`</div>`;
+  });
+
+  // Always show fundamentals
+  html+=`<div class="teaching" style="margin-top:12px;border-color:#444"><h3>Sales Trading P&L — Market Convention Reference</h3>
+    <div class="tip"><b>Core formula:</b> Sales Credit = (Your Price − Hedge Level) × Risk Factor</div>
+    <div class="tip"><b>FX Spot (XXX/USD):</b> P&L(USD) = pips captured × notional in base ccy<br>
+    &nbsp;&nbsp;Example: EUR/USD €10M, 3 pip markup → 0.0003 × 10,000,000 = <b>$3,000</b></div>
+    <div class="tip"><b>FX Spot (USD/XXX) & NDFs:</b> P&L(USD) = (pips × USD notional) ÷ spot rate<br>
+    &nbsp;&nbsp;Example: USD/CNH $50M, 2 pip markup → (0.0002 × 50,000,000) ÷ 7.19 = <b>$1,391</b></div>
+    <div class="tip"><b>Rates (IRS/CCS):</b> P&L = bps × DV01 × notional<br>
+    &nbsp;&nbsp;Example: 5Y IRS $50M, 0.5bp spread → 0.5 × 0.00046 × 50,000,000 = <b>$11,500</b></div>
+    <div class="tip"><b>Commodities:</b> P&L = $/unit spread × quantity<br>
+    &nbsp;&nbsp;Example: Gold 1000oz, $1.60 spread → 1.60 × 1,000 = <b>$1,600</b></div>
+    <div class="warn"><b>Pricing through:</b> If your quote is on the wrong side of hedge level, you book a <b>negative</b> sales credit. The desk still hedges, but the loss comes out of your P&L attribution.</div>
+  </div>`;
+
+  html+=`</div>`;
+
+  // Save session & render progress tracker
+  const durLabel=SESSION_DURATION>=60?Math.round(SESSION_DURATION/60)+'min':SESSION_DURATION+'s';
+  const sessionData={date:new Date().toISOString().slice(0,10),duration:durLabel,pnl:game.pnl,fills:filled.length,hitRate,errors:badTrades.length,rejected:rejected.length,expired:expired.length,grade};
+  saveSession(sessionData);
+  html+=buildProgressSection(sessionData);
+
+  html+=`<button class="restart-btn" onclick="location.reload()">NEW SESSION</button>`;
+  html+=`<button class="pdf-btn" onclick="downloadPDF()">DOWNLOAD PDF</button>`;
+  c.innerHTML=html;
+  document.body.appendChild(c);
+  // Prompt free users to upgrade after seeing results
+  if(!isPro()){setTimeout(showUpgrade,2500);}
+}
+
+function downloadPDF(){
+  const content=document.querySelector('.completion');
+  if(!content)return;
+  const w=window.open('','_blank');
+  const now=new Date();
+  const dateStr=now.toISOString().slice(0,10)+' '+now.toTimeString().slice(0,5);
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Sales Trading Session Report - ${dateStr}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#fff;color:#000;font-family:'Consolas','Monaco','Courier New',monospace;font-size:11px;padding:30px 40px;line-height:1.6}
+h1{font-size:20px;text-align:center;margin-bottom:4px;letter-spacing:2px}
+.date{text-align:center;color:#666;font-size:10px;margin-bottom:20px}
+.final-pnl{font-size:32px;font-weight:bold;text-align:center;margin:12px 0}
+.final-pnl.pos{color:#006600}
+.final-pnl.neg{color:#cc0000}
+.subtitle{text-align:center;color:#666;margin-bottom:16px;font-size:11px}
+.stats-grid{display:flex;justify-content:center;gap:30px;margin:16px 0 20px;padding:10px;border:1px solid #ddd;background:#f9f9f9}
+.sg-item{text-align:center}
+.sg-val{font-size:16px;font-weight:bold}
+.sg-label{font-size:9px;color:#666;text-transform:uppercase}
+.grade-box{text-align:center;margin:16px 0}
+.grade-box .grade{font-size:32px;font-weight:bold;padding:8px 20px;border:2px solid #333;display:inline-block;letter-spacing:3px}
+.grade-box .grade.A{color:#006600;border-color:#006600}
+.grade-box .grade.B{color:#006688;border-color:#006688}
+.grade-box .grade.C{color:#886600;border-color:#886600}
+.grade-box .grade.D{color:#cc0000;border-color:#cc0000}
+.grade-desc{text-align:center;color:#444;font-size:10px;margin:6px 0 16px}
+h2{font-size:13px;font-weight:bold;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #ccc;text-transform:uppercase;letter-spacing:1px}
+.trade-review{border:1px solid #ddd;padding:10px 12px;margin-bottom:8px;border-left:4px solid #999;page-break-inside:avoid}
+.trade-review.tr-good{border-left-color:#006600}
+.trade-review.tr-bad{border-left-color:#cc0000}
+.trade-review.tr-ok{border-left-color:#886600}
+.tr-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;font-weight:bold}
+.tr-num{color:#999;font-size:10px}
+.tr-product{font-size:11px;font-weight:bold}
+.tr-pnl{font-weight:bold;font-size:12px}
+.tr-pnl.pos{color:#006600}
+.tr-pnl.neg{color:#cc0000}
+.tr-tag{font-size:9px;padding:2px 5px;border:1px solid;font-weight:bold;display:inline-block}
+.tr-tag.good{color:#006600;border-color:#006600}
+.tr-tag.bad{color:#cc0000;border-color:#cc0000}
+.tr-tag.ok{color:#886600;border-color:#886600}
+.tr-row{display:flex;gap:6px;margin:3px 0;font-size:10px}
+.tr-label{color:#666;width:70px;flex-shrink:0;text-transform:uppercase;font-size:9px;font-weight:bold}
+.tr-val{color:#333;flex:1}
+.tr-val b{color:#000}
+.tr-val .highlight{color:#000;font-weight:bold;text-decoration:underline}
+.teaching{border:1px solid #ddd;padding:12px;margin-top:10px;page-break-inside:avoid}
+.teaching h3{font-size:12px;margin-bottom:6px;border-bottom:1px solid #eee;padding-bottom:4px}
+.teaching b{font-weight:bold}
+.tip{margin:6px 0;padding-left:10px;border-left:2px solid #333;font-size:10px}
+.warn{margin:6px 0;padding-left:10px;border-left:2px solid #cc0000;color:#cc0000;font-size:10px}
+.pattern-box{border:1px solid #ddd;padding:10px;margin-top:6px;font-size:11px}
+.pattern-box div{margin-bottom:4px}
+@media print{body{padding:15px 20px}h1{font-size:16px}.final-pnl{font-size:24px}}
+</style></head><body>
+<h1>DESKFLOW SESSION REPORT</h1>
+<div class="date">${dateStr} | Trading Simulation</div>`);
+
+  // Extract data from the completion div
+  const pnlEl=content.querySelector('.final-pnl');
+  const pnlClass=pnlEl?pnlEl.className.replace('final-pnl','').trim():'';
+  w.document.write(`<div class="final-pnl ${pnlClass}">${pnlEl?pnlEl.textContent:''}</div>`);
+  
+  const subtitle=content.querySelector('[style*="color:#888"]');
+  if(subtitle) w.document.write(`<div class="subtitle">${subtitle.textContent}</div>`);
+
+  // Stats grid
+  const statsGrid=content.querySelector('.stats-grid');
+  if(statsGrid) w.document.write(`<div class="stats-grid">${statsGrid.innerHTML.replace(/sg-/g,'sg-')}</div>`);
+
+  // Grade
+  const gradeEl=content.querySelector('.feedback .grade');
+  const gradeDesc=content.querySelector('.grade-desc');
+  if(gradeEl){
+    const gClass=gradeEl.className.replace('grade','').trim();
+    w.document.write(`<div class="grade-box"><div class="grade ${gClass}">${gradeEl.textContent}</div></div>`);
+    if(gradeDesc) w.document.write(`<div class="grade-desc">${gradeDesc.textContent}</div>`);
+  }
+
+  // All h2 sections and their content
+  const feedback=content.querySelector('.feedback');
+  if(feedback){
+    const children=feedback.children;
+    let inSection=false;
+    for(let i=0;i<children.length;i++){
+      const el=children[i];
+      if(el.tagName==='DIV'&&el.classList.contains('grade'))continue;
+      if(el.tagName==='DIV'&&el.classList.contains('grade-desc'))continue;
+      if(el.tagName==='H2'){
+        w.document.write(`<h2>${el.textContent}</h2>`);
+        inSection=true;
+      } else if(el.classList.contains('trade-review')){
+        let trClass='';
+        if(el.classList.contains('tr-good'))trClass='tr-good';
+        else if(el.classList.contains('tr-bad'))trClass='tr-bad';
+        else if(el.classList.contains('tr-ok'))trClass='tr-ok';
+        w.document.write(`<div class="trade-review ${trClass}">${el.innerHTML}</div>`);
+      } else if(el.classList.contains('pattern-box')){
+        w.document.write(`<div class="pattern-box">${el.innerHTML}</div>`);
+      } else if(el.classList.contains('teaching')){
+        w.document.write(`<div class="teaching">${el.innerHTML}</div>`);
+      }
+    }
+  }
+
+  w.document.write(`</body></html>`);
+  w.document.close();
+  setTimeout(()=>{w.print();},500);
+}
+</script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js');}</script>
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+</body>
+</html>
