@@ -367,7 +367,7 @@ const STRIPE_LINKS={
 };
 const FREE_DAILY_LIMIT=2; // max sessions per day for free users
 
-const isPro=()=>localStorage.getItem('deskflow_pro')==='true';
+const isPro=()=>true; // everything is free now
 
 function getSessionCount(){
   const data=JSON.parse(localStorage.getItem('deskflow_sessions')||'{}');
@@ -1720,8 +1720,7 @@ function endGame(){
   html+=`<button class="pdf-btn" onclick="downloadPDF()">DOWNLOAD PDF</button>`;
   c.innerHTML=html;
   document.body.appendChild(c);
-  // Prompt free users to upgrade after seeing results
-  if(!isPro()){setTimeout(showUpgrade,2500);}
+  // All features free — no upgrade prompt
 }
 
 function downloadPDF(){
